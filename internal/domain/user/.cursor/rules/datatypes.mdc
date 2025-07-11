@@ -1,0 +1,23 @@
+# Data Types
+
+This rule describes the required data types in the user domain and their behavior. All types are defined as custom types for stronger type safety and extensibility.
+
+## Email
+Definition: Used as one of the user identifiers. No need to do validation here; validation will be handled elsewhere.
+- Type: string (custom type recommended, e.g., `type Email string`)
+
+## Password
+Definition: User password. Should be at least 8 characters long, contain 1 UPPERCASE letter, 1 lowercase letter, 1 number, and 1 special character. Validation logic is handled elsewhere.
+- Type: string (custom type recommended, e.g., `type Password string`)
+
+## Ciphertext
+Definition: Hashed version of password. Constructed from Password using a secure hash algorithm (e.g., bcrypt with at least 10 rounds). Must provide a method to check if a Password matches the hash.
+- Type: string (custom type recommended, e.g., `type Ciphertext string`)
+- Construction: From Password, using a secure hash algorithm
+- Validation: Must provide a method to check if a Password matches the hash
+
+---
+
+This rule is extensible for future user-related types (e.g., password reset tokens, email verification, etc.).
+
+Note: For technical implementation details or code templates, see generator/template rules such as generic-types.mdc.
