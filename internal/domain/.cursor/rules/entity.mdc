@@ -1,0 +1,59 @@
+# Entity
+
+This rule describe meta information of generic data type generation pattern.
+
+---
+## Identity
+Field Identity triggering definition of Identity of <EntityName>
+
+**Example:**
+```
+ID: Identity of Tenant
+```
+Generates:
+```go
+import "github.com/google/uuid"
+type TenantID uuid.UUID
+```
+
+---
+### Enumerated String 
+Field Enumerated string triggering definition of EnumeratedString of <EntityName>+<FieldName> 
+
+**Example:**
+```
+Status: Enumerated String of "active", "inactive", default "active"
+```
+Generates:
+```go
+type TenantStatus string
+
+const (
+    TenantStatusActive   TenantStatus = "active"
+    TenantStatusInactive TenantStatus = "inactive"
+    TenantStatusDefault  TenantStatus = TenantStatusActive // Default value
+)
+```
+
+---
+### Constructor
+Entity Definition also generates constructor with field with **constructor input** tags as args
+
+**Example:**
+```
+ID: Identity of Tenant // constructor input
+Name: string // constructor input
+Status: Tenant Status // constructor input
+CreatedAt: time.Time
+```
+Generates:
+```go
+func NewTenant(id TenantID, name string, status TenantStatus) *Tenant {
+    return &Tenant{
+        ID:     id,
+        Name:   name,
+        Status: status,
+        // other fields set to zero value or handled separately
+    }
+}
+``` 
