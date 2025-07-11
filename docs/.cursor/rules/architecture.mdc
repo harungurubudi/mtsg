@@ -1,0 +1,51 @@
+---
+description: This document contains information about the application architecture
+globs:
+alwaysApply: false
+---
+
+# File Generation
+
+This rule generate ./docs/architecture.md file
+
+---
+
+# Architecture
+
+This document contains information about the application architecture
+
+---
+
+## High-Level Overview
+
+```mermaid
+graph TD
+    A["Interface Layer (API, CLI)"]
+    B["Usecase Layer"]
+    C["Domain Layer"]
+    D["Repository Layer (Postgres, Redis)"]
+
+    A --> B
+    B --> C
+    B --> D
+```
+
+## Layer Interactions
+
+- The **Interface Layer** (e.g., API handlers) receive requests and pass them to the **Usecase Layer**.
+- The **Usecase Layer** contains application-specific business logic. It coordinates operations using domain entities and interfaces.
+- The **Domain Layer** defines core business entities (e.g., Tenant, User) and interfaces. It is independent of other layers.
+- The **Repository Layer** provides concrete implementations for data storage (e.g., Postgres, Redis), fulfilling interfaces defined in the domain layer. The usecase layer interacts with repositories only through these interfaces.
+
+This separation ensures that business logic is isolated from infrastructure concerns, making the codebase easier to test and maintain.
+
+## Directory Structure
+
+`mtsg` is built using **Clean Architecture** principles, dividing the application into well-separated layers:
+
+```
+internal/
+├── domain/ # Core entities and interfaces (Tenant, User, etc.)
+├── usecase/ # Application logic (Login, CreateProject)
+└── repository/ # Postgres + Redis implementations
+```
