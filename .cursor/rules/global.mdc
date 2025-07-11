@@ -1,3 +1,13 @@
+---
+description: Document to explain the architecture, domain models, and system purpose for mtsg. These docs will help new readers (and future collaborators) understand what the project is and how it works
+globs:
+alwaysApply: false
+---
+
+# File Generation
+
+This rule generate README.md file in root directory
+
 # Multi-Tenant Backend in Go
 
 Backend skeleton for building **multi-tenant applications** in Go. It includes core building blocks like tenant isolation, authorization and authentication, tenant project scoping, and clean architecture
