@@ -1,0 +1,27 @@
+## Generic Data Types 
+
+This rule describe meta information of generic data type generator
+
+### Enumerated String
+
+It's represent new type definition of string and some constants with these type. The constants are defined in CamelCase prefixed by type name, and the value are written in snake case. For example, when it written something like this (Please make it fault tolerant. It should be a little bit flexible. U know, I am a little bit clumsy): 
+
+```
+UserStatus is Enumerated string of "active" and "inactive"
+```
+
+It can be representation of code :  
+
+```go
+// UserStatus represents the status of a user account.
+// Valid values are UserStatusActive and UserStatusInactive.
+type UserStatus string
+
+const (
+    // UserStatusActive indicates the user account is active.
+    UserStatusActive UserStatus = "active"
+
+    // UserStatusInactive indicates the user account is inactive.
+    UserStatusInactive UserStatus = "inactive"
+) 
+```
