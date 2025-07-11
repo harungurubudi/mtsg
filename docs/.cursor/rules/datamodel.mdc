@@ -1,0 +1,104 @@
+# Data Model
+
+This document shows data model for the `mtsg` multi-tenant backend. It contains the main entities, their fields, and relationships.
+
+---
+
+## Notes
+
+This model is intentionally simple and extendable. Future additions may include audit logs, plans/subscriptions, invitations, etc.
+
+## Entities Overview
+
+### Tenant
+
+Represents an isolated customer or organization.
+
+| Field       | Description                 |
+| ----------- | --------------------------- |
+| `ID`        | string (Unique PK)          |
+| `Name`      | string                      |
+| `CreatedAt` | time.Time                   |
+| `UpdatedAt` | time.Time                   |
+| `DeletedAt` | time.Time                   |
+| `IsDeleted` | bool                        |
+
+
+### User
+A person who belongs to a single tenant and interacts with the system.
+
+| Field       | Description                 |
+| ----------- | --------------------------- |
+| `ID`        | string (Unique PK)          |
+| `TenantID`  | string                      |
+| `Name`      | string                      |
+| `Email`     | string                      |
+| `CipherText`| string                      |
+| `Role`      | string (admin or member)    |
+| `CreatedAt` | time.Time                   |
+| `UpdatedAt` | time.Time                   |
+| `DeletedAt` | time.Time                   |
+| `IsDeleted` | bool                        |
+
+### Project
+A resource owned by a tenant, created and managed by users.
+| Field       | Description                 |
+| ----------- | --------------------------- |
+| `ID`        | string (Unique PK)          |
+| `TenantID`  | string                      |
+| `Name`      | string                      |
+| `CreatedBy` | string (UserID)             |
+| `CreatedAt` | time.Time                   |
+| `UpdatedAt` | time.Time                   |
+| `DeletedAt` | time.Time                   |
+| `IsDeleted` | bool                        |
+
+---
+
+## Entity Relationship Diagram
+
+```mermaid
+
+erDiagram
+    TENANT ||--o{ USER : has
+    TENANT ||--o{ PROJECT : owns
+    USER ||--o{ PROJECT : creates
+
+    TENANT {
+        string ID PK
+        string Name
+        time CreatedAt
+    }
+
+    USER {
+        string ID PK
+        string TenantID FK
+        string Name
+        string Email
+        string CipherText
+        string Role
+        time CreatedAt
+    }
+
+    PROJECT {
+        string ID PK
+        string TenantID FK
+        string Name
+        string CreatedBy FK
+        time CreatedAt
+    }
+
+```
+
+---
+
+## Multi-Tenancy Design Notes
+- All entities include TenantID for scoping.
+- No cross-tenant access is allowed.
+- Auth token store the current TenantID and UserID.
+
+---
+
+## Indexing Strategy
+- users - (tenantID, email) for login
+- projects - (tenantID) 
