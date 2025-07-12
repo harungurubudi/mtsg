@@ -1,0 +1,19 @@
+# Project
+
+This rules describes about **project** entity and it's behaviour
+
+## Entity
+
+### Project
+
+- ID: Identity of Project - New Identity
+- TenantID: Identity of Tenant - constructor input, referenced from internal/domain/tenant. No need to define here
+- Name: string - constructor input
+- Description: string - Default: ""
+- CreatedBy: Identity of User - constructor input, referenced from internal/domain/user. No need to define here
+- Status: Enumerated string of "active", "inactive", "archived", "draft", default("active")
+---
+
+Note: This entity definition follows the meta-rules in `entity.mdc` for code generation. For validation rules (e.g., required fields) or business logic (e.g., allowed status transitions), add a section below or reference a related rule file.
+
+
