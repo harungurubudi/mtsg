@@ -1,0 +1,20 @@
+# User
+
+This rules describes about **user** entity and it's behaviour
+
+## Entity
+
+### User
+
+- ID: Identity of User - New Identity
+- TenantID: Identity of Tenant - constructor input, referenced from internal/domain/tenant. No need to define here
+- Email: Email - constructor input
+- Name: string - constructor input
+- Role: Enumerated string of "admin", "member", default("member") - constructor input
+- CipherText: CipherText - Default: "", secret
+- Status: Enumerated string of "active", "inactive", default("active")
+---
+
+Note: This entity definition follows the meta-rules in `entity.mdc` for code generation. For validation rules (e.g., required fields) or business logic (e.g., allowed status transitions), add a section below or reference a related rule file.
+
+

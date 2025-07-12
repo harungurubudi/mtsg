@@ -1,0 +1,16 @@
+# Tenant
+
+This rules describes about **tenant** entity and it's behaviour
+
+## Entity
+
+### Tenant
+
+- ID: Identity of Tenant - New Identity
+- Name: string - constructor input
+- Status: Enumerated string of "active", "inactive", default("active")
+---
+
+Note: This entity definition follows the meta-rules in `entity.mdc` for code generation. For validation rules (e.g., required fields) or business logic (e.g., allowed status transitions), add a section below or reference a related rule file.
+
+

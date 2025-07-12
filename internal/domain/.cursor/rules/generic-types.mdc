@@ -1,0 +1,44 @@
+## Generic Data Types 
+
+This rule describe meta information of generic data type generator. This also act as guide of pattern definition to generate code in go. All of pattern described here should be fault tolerant. Which means it should be ok if definition make small mistake, as long as it understandable.
+
+### Identity
+
+It represent new type defintion of ``uuid.UUID`` from library ``github.com/google/uuid``. For example, when it written something like this : 
+
+```
+Identity of Tenant
+```
+
+It represent as code :  
+
+```go
+
+import "github.com/google/uuid"
+
+type TenantID uuid.UUID
+
+```
+
+
+### Enumerated String
+
+It's represent new type definition of string and some constants with these type. The constants are defined in CamelCase prefixed by type name, and the value are written in snake case. You can also specify a default value. For example, when it written : 
+
+```
+UserStatus is Enumerated string of "active", "inactive", default "inactive"
+```
+
+It can be representation of code :  
+
+```go
+type UserStatus string
+
+const (
+    UserStatusActive   UserStatus = "active"
+    UserStatusInactive UserStatus = "inactive"
+    UserStatusDefault  UserStatus = UserStatusInactive // Default value
+)
+```
+
+The default constant can be used for initialization, zero-value checks, or validation helpers. 

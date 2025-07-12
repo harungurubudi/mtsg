@@ -1,0 +1,7 @@
+# Unit Test
+
+- All public method in domain **SHOULD** generate unit test file in same directory. 
+- Test name **SHOULD** be written in CamelCase. e.g. : ``TestNewUserWithValidInputReturnsUser``
+- Constructor **SHOULD NOT** have unit test. Except the output technically need to be verified. For example : Constructor result can be error for specific input.  
+- Test **SHOULD** be written in test table format.
+- Test is **RECOMMENDED** to be compliance with "github.com/stretchr/testify/suite" library.
