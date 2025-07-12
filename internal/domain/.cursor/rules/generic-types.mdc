@@ -41,4 +41,4 @@ const (
 )
 ```
 
-// The default constant can be used for initialization, zero-value checks, or validation helpers. 
+The default constant can be used for initialization, zero-value checks, or validation helpers. 
