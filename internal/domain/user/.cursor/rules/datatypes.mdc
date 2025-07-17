@@ -7,8 +7,9 @@ Definition: Used as one of the user identifiers. No need to do validation here; 
 - Type: string (custom type recommended, e.g., `type Email string`)
 
 ## Password
-Definition: User password. Should be at least 8 characters long, contain 1 UPPERCASE letter, 1 lowercase letter, 1 number, and 1 special character. Validation logic is handled elsewhere.
+Definition: User password. Should be at least 8 characters long, contain 1 UPPERCASE letter, 1 lowercase letter, 1 number, and 1 special character.
 - Type: string (custom type recommended, e.g., `type Password string`)
+- Has validate method with boolean result to make sure it is complied the password specificaton. Otherwise, return Ffalse
 
 ## Ciphertext
 Definition: Hashed version of password. Constructed from Password using a secure hash algorithm (e.g., bcrypt with at least 10 rounds). Must provide a method to check if a Password matches the hash.
