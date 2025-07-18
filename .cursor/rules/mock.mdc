@@ -1,0 +1,47 @@
+# Global Mock Generation Rule
+
+All interfaces that represent a concrete implementation (e.g., adapters, repositories, services) MUST also generate a mock implementation that complies with the `github.com/stretchr/testify/mock` library.
+
+## Purpose
+- Enable robust unit testing for any service or component that depends on an interface
+- Allow for easy mocking, stubbing, and assertion of method calls and behaviors
+- Ensure that all interfaces are testable and can be used in isolation
+
+## Requirements
+- For every interface, generate a corresponding mock struct in a shared `testmock` or `mock` package at the project root (recommended for reusability), or in the same package if only used locally
+- The mock must embed `mock.Mock` from `github.com/stretchr/testify/mock`
+- All interface methods must be implemented on the mock, delegating to `mock.Mock` methods (e.g., `Called`, `On`, `Return`)
+- The mock should be named with the `Mock` prefix or suffix (e.g., `MockAdapter`, `UserRepositoryMock`)
+- The mock must be suitable for use in table-driven tests and testify suites
+
+## Example
+```go
+import "github.com/stretchr/testify/mock"
+
+// In testmock/mock_redis_adapter.go
+package testmock
+
+type MockRedisAdapter struct {
+    mock.Mock
+}
+
+func (m *MockRedisAdapter) GetByKey(ctx context.Context, key string, receiver any) error {
+    args := m.Called(ctx, key, receiver)
+    return args.Error(0)
+}
+// ... other methods ...
+```
+
+## Best Practices
+- Place all mocks in a shared `testmock` or `mock` package for reusability and maintainability
+- Use mocks in unit tests to isolate dependencies and assert interactions
+- Document the purpose and usage of each mock
+- If a mock is only used in one package, it can be placed locally, but prefer centralization for shared interfaces
+
+---
+
+Note: This rule ensures that all interfaces are easily testable and that services depending on them can be unit tested using testify's mocking capabilities. Centralizing mocks in a shared package is recommended for larger projects.
+description:
+globs:
+alwaysApply: false
+---
