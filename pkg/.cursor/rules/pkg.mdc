@@ -1,0 +1,38 @@
+# pkg Directory Rules
+
+The `pkg` directory is intended for shared, reusable code that is not specific to any single domain or application layer. Code in `pkg` can be imported by any part of the project, and is designed to be generic, composable, and infrastructure-focused.
+
+## Purpose
+- Provide utilities, helpers, and types that are used across multiple domains or layers
+- Encapsulate infrastructure concerns (e.g., token generation, logging, middleware, adapters)
+- Enable code reuse and reduce duplication
+- Optionally, code in `pkg` can be imported by other projects if needed
+
+## Best Practices
+- Code in `pkg` should be generic and not depend on domain-specific logic
+- Avoid importing code from `internal/` or domain layers into `pkg`
+- Keep interfaces and types simple and focused on a single responsibility
+- Document the purpose and usage of each package clearly
+- Use idiomatic Go naming and structure
+
+## Examples of What Belongs in `pkg`
+- Token generation and validation (e.g., JWT, session tokens)
+- Logging utilities
+- Middleware for HTTP servers
+- Error handling helpers
+- Configuration loaders
+- Common adapters (e.g., Redis, database, cache wrappers)
+
+## What Does NOT Belong in `pkg`
+- Business/domain logic (keep this in `internal/domain`)
+- Application-specific use cases
+- Code that is tightly coupled to a single domain or service
+
+---
+
+Note: Follow these rules to keep the `pkg` directory clean, reusable, and maintainable. For code generation patterns, see related rules in `.cursor/rules/`.
+description:
+globs:
+alwaysApply: false
+---
+ 
