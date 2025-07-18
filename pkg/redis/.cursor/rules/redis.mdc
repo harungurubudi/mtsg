@@ -1,0 +1,66 @@
+# Redis Adapter Rule
+
+The `redis` package provides an adapter that wraps the `github.com/go-redis/redis/v8` library, offering a simplified and type-safe API for common Redis operations.
+
+## Purpose
+- Abstract away direct usage of the go-redis client
+- Provide a reusable, testable, and idiomatic interface for Redis operations
+- Enable easy mocking and extension for testing and future enhancements
+
+## Required Methods
+
+### GetByKey
+- **Signature**: `GetByKey(ctx context.Context, key string, receiver any) error`
+- **Behavior**: Retrieves the value for the given key and unmarshals/casts it into the provided receiver pointer. Returns an error if the key does not exist or unmarshaling fails.
+
+### Set
+- **Signature**: `Set(ctx context.Context, key string, value any, expiration time.Duration) error`
+- **Behavior**: Stores the value under the given key with the specified expiration. Value can be any serializable type.
+
+### DeleteByKeys
+- **Signature**: `DeleteByKeys(ctx context.Context, keys ...string) error`
+- **Behavior**: Deletes one or more keys from Redis. Returns an error if any deletion fails.
+
+### IsExist
+- **Signature**: `IsExist(ctx context.Context, key string) (bool, error)`
+- **Behavior**: Checks if the given key exists in Redis. Returns true if the key exists, false otherwise, and an error if the operation fails.
+
+## Best Practices
+- Use idiomatic Go error handling
+- Ensure all methods are context-aware for cancellation and timeouts
+- Use generic or interface-based receiver for GetByKey to support any type
+- Document the expected serialization format (e.g., JSON)
+- Avoid exposing go-redis types directly in the public API
+- Make the adapter easy to mock for testing
+
+## Example Usage
+```go
+import (
+    "context"
+    "time"
+    "github.com/harungurubudi/mtsg/pkg/redis"
+)
+
+var rdb redis.Adapter
+
+// Set a value
+err := rdb.Set(ctx, "mykey", myStruct, 10*time.Minute)
+
+// Get a value
+var result MyStruct
+err := rdb.GetByKey(ctx, "mykey", &result)
+
+// Check existence
+exists, err := rdb.IsExist(ctx, "mykey")
+
+// Delete keys
+err := rdb.DeleteByKeys(ctx, "mykey", "otherkey")
+```
+
+---
+
+Note: The Redis adapter should be generic, reusable, and not expose domain-specific logic. For domain-specific usage, reference the adapter from the appropriate domain or application layer.
+description:
+globs:
+alwaysApply: false
+---
