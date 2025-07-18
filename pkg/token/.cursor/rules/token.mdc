@@ -1,0 +1,63 @@
+# Token Package Rule
+
+The `token` package provides utilities and types for generating, validating, and managing tokens used throughout the application (e.g., access tokens, refresh tokens, session tokens).
+
+## Definition
+
+### Subject
+Defines what the token is used for. This is a string (e.g., "access", "refresh", "email_verification").
+
+### Identifier
+Defines the identity of the token owner. This is a string, usually containing a stringified user ID or other unique identifier.
+
+### Claims
+Defines the information contained within the token:
+- **Subject**: string — what the token is for
+- **Identifier**: string — who the token belongs to
+- **Payload**: map[string]interface{} — meta information or custom claims
+- **LinkedToken**: Token — another token that should be revoked together with this one
+- **JTI**: UUID — unique identifier for the token (JWT ID)
+- **NBF**: int64 — "not before" timestamp (Unix seconds)
+- **EXP**: int64 — expiration timestamp (Unix seconds)
+
+### Token Construction
+A token is defined as a string, but is constructed from claims. For example:
+
+```go
+// Claims represents the data inside a token.
+type Claims struct {
+    Subject     string                 `json:"sub"`
+    Identifier  string                 `json:"id"`
+    Payload     map[string]interface{} `json:"payload,omitempty"`
+    LinkedToken Token                 `json:"linked_token,omitempty"`
+    JTI         uuid.UUID                 `json:"jti"`
+    NBF         int64                  `json:"nbf"`
+    EXP         int64                  `json:"exp"`
+}
+
+// Token is a string representation of the claims (e.g., JWT, opaque string).
+type Token string
+
+// New creates a new token from claims.
+func New(claims Claims) (Token, error) {
+    // Implementation: serialize, sign, and return the token string
+}
+
+// Validate parses and validates a token string.
+func Validate(token Token) (*Claims, error) {
+    // Implementation: parse, verify signature, check expiration, etc.
+}
+```
+
+## Best Practices
+- Keep the API simple and focused on token operations (generation, validation, parsing)
+- Do not include business logic or domain-specific rules in the token package
+- Document the purpose and security considerations for each function
+- Use idiomatic Go naming and error handling
+- Make the package extensible for future token types or strategies
+- Ensure tokens are secure, unique, and unpredictable
+- If using signed tokens (e.g., JWT), use strong cryptographic algorithms
+
+---
+
+Note: The token package should be generic and reusable across the project. For domain-specific usage, reference the token package from the appropriate domain or application layer.

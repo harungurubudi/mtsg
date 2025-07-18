@@ -39,7 +39,10 @@ const (
   - UpdatedAt time.Time, with default value : now in construction time
   - DeletedAt time.Time, with default value : nil
   - IsDeleted bool, with default value : false
-- All fields are generated with JSON tags in snake_case by default. Fields marked with the 'secret' tag are not marshaled to JSON.
+- Tags : 
+  - All fields are generated with JSON tags in snake_case by default. 
+  - Fields marked with the 'secret' tag are not marshaled to JSON.
+  - Fields described Validated as **something** have validate tag complied with github.com/go-playground/validator library.
 - Entity Definition also generates constructor with field with **constructor input** tags as args
 - Automatic fields are set in the constructor automatically and are not passed as constructor parameters
 - Developers can override automatic fields by explicitly defining them in the field list (e.g., if different default values or field names are needed)
