@@ -1,0 +1,55 @@
+# Token Generator Service Rule
+
+The token generator service is responsible for generating, validating, and revoking stateful tokens using Redis as the storage backend. This service does NOT use JWT or any other stateless token format.
+
+## Dependencies
+- Redis adapter (implements Adapter interface from pkg/redis)
+- Key (string): used as a secret for token generation (e.g., for HMAC or bcrypt)
+
+## Fields
+- redis: Redis adapter
+- key: string
+
+## Methods
+
+### Generate
+- **Signature**: `Generate(ctx context.Context, claims Claims) (Token, error)`
+- **Behavior**:
+  - Generate a new, unique, and unpredictable token string (recommended: use HMAC-SHA256 with key, or crypto/rand; bcrypt is possible but not standard for this use case)
+  - Store the claims in Redis with the token as the key and claims as the value (JSON-encoded)
+  - Set the Redis TTL to claims.EXP (expiration)
+  - Return the generated token
+
+### Validate
+- **Signature**: `Validate(ctx context.Context, token Token) (*Claims, error)`
+- **Behavior**:
+  - Retrieve the claims from Redis using the token as the key
+  - Check that the claims are valid (not before NBF, etc.)
+  - Do NOT check claims.EXP; expiration is handled by Redis TTL (if the token is expired, it will not be found)
+  - Return the claims if valid, or an error if not
+
+### Revoke
+- **Signature**: `Revoke(ctx context.Context, token Token) error`
+- **Behavior**:
+  - Delete the token from Redis
+
+## Best Practices
+- Use a secure, random, and unique token generator (HMAC, crypto/rand, or bcrypt if you have a specific reason)
+- Store claims as JSON in Redis
+- Set TTL to claims.EXP for automatic expiration
+- Ensure all methods are context-aware and return clear errors
+- Define all error values as package-level variables/constants at the top of the file
+- Do not expose Redis or token generation details in the public API
+- Do NOT use JWT or any stateless token format
+
+## Example Usage
+```go
+svc := token.NewGenerator(redisAdapter, "my-secret-key")
+token, err := svc.Generate(ctx, claims)
+claims, err := svc.Validate(ctx, token)
+err := svc.Revoke(ctx, token)
+```
+
+---
+
+Note: This service is designed for stateful token management using Redis. For stateless tokens, use a different approach.
