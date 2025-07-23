@@ -1,0 +1,47 @@
+# Repository Layer Rule
+
+The repository layer is responsible for abstracting data access and persistence in the application. It defines interfaces for interacting with data sources (such as databases, in-memory stores, or external services) and provides concrete implementations for each backend.
+
+description: Defines repository layer responsibilities, interface/implementation patterns, naming conventions, and best practices for Clean Architecture.
+globs:
+alwaysApply: false
+
+## Purpose
+- Decouple domain logic from data storage and retrieval concerns
+- Enable easy swapping of data sources (e.g., in-memory, database, mock)
+- Facilitate testing by allowing the use of fake or mock repositories
+- Centralize all data access logic for maintainability and consistency
+
+## Requirements
+- **Every repository MUST define an interface** for its operations (e.g., `UserRepository`, `TenantRepository`).
+  - This enables abstraction, testability, and future extensibility.
+- Concrete implementations (e.g., in-memory, database) should satisfy the interface.
+- **Naming convention:** Use `EntityRepository` for interfaces (e.g., `UserRepository`), and `EntityPersistence` or `EntityRepositoryPostgres` for implementations (e.g., `UserPersistence`, `UserRepositoryPostgres`).
+- **Interface placement:** Define repository interfaces in the `internal/repository` package for consistency and discoverability.
+- **Mocks:** Place all repository mocks in a shared `testmock` package for reusability across tests.
+- **Error handling:** Repository methods should return domain-meaningful errors, not just raw database errors, to keep the domain layer clean.
+- **Extensibility:** Add new data sources (e.g., cache, external API) as new implementations of the same interface.
+
+## What Belongs Here
+- Repository interfaces for each aggregate/entity (e.g., UserRepository, TenantRepository)
+- Concrete implementations (e.g., UserPersistence, UserRepositoryPostgres)
+- Data mapping and transformation logic between domain models and storage representations
+
+## Example
+```go
+// UserRepository defines data access methods for users.
+type UserRepository interface {
+    GetByID(ctx context.Context, id UserID) (*User, error)
+    Save(ctx context.Context, user *User) error
+}
+
+// UserPersistence is an in-memory implementation.
+type UserPersistence struct { /* ... */ }
+
+func (r *UserPersistence) GetByID(ctx context.Context, id UserID) (*User, error) { /* ... */ }
+func (r *UserPersistence) Save(ctx context.Context, user *User) error { /* ... */ }
+```
+
+---
+
+Note: The repository layer is a key part of Clean Architecture, ensuring that domain logic remains independent of infrastructure and data storage details.

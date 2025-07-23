@@ -1,0 +1,87 @@
+# Stacktraceable Error Rule
+
+This rule defines a standard for stacktraceable error structs in Go, enabling robust error handling, debugging, and error wrapping throughout the project.
+
+description: Defines a standard for stacktraceable error structs with stack trace, caller info, error wrapping, and Go error interface compatibility.
+globs:
+alwaysApply: false
+
+## Purpose
+- Provide a consistent, idiomatic way to capture stack traces with errors
+- Enable error wrapping and chaining for better context
+- Capture caller function, file, and line for immediate error context
+- Support integration with Go's standard error handling (`errors.Is`, `errors.As`, `errors.Unwrap`)
+- Facilitate debugging and logging with stack trace and caller output
+
+## Requirements
+- The error struct MUST:
+  - Implement the `error` interface
+  - Store an error message (`Msg`)
+  - Optionally wrap a cause error (`Cause`)
+  - Capture a stack trace (`Stack`) at the point of error creation
+  - Store the caller function name (`Function`), file (`File`), and line (`Line`) where the error was created
+  - (Optional) Store an error code or metadata for structured error handling
+- Provide a constructor (e.g., `NewStackError`) that captures the stack trace and caller info, and wraps an optional cause
+- (Optional) Provide a formatting constructor (e.g., `NewStackErrorf(format string, args ...interface{}, cause error)`)
+- Provide a `StackTrace()` method that returns a formatted stack trace as a string (e.g., using `runtime.CallersFrames` for human-readable output)
+- Provide an `Unwrap()` method for error chaining
+- Be suitable for use in all layers of the application
+- Fields should be exported (capitalized) if the struct is used across packages
+
+## Struct Example
+```go
+import "runtime"
+
+type StackError struct {
+    Msg      string      // Error message
+    Cause    error       // Wrapped cause error (optional)
+    Stack    []uintptr   // Captured stack trace
+    Function string      // Caller function name
+    File     string      // Caller file
+    Line     int         // Caller line
+    Code     string      // (Optional) Error code for structured handling
+}
+
+func (e *StackError) Error() string { /* ... */ }
+func (e *StackError) Unwrap() error { /* ... */ }
+func (e *StackError) StackTrace() string { /* Format stack using runtime.CallersFrames ... */ }
+
+func NewStackError(msg string, cause error) *StackError {
+    const depth = 32
+    pcs := make([]uintptr, depth)
+    n := runtime.Callers(2, pcs)
+    frame, _ := runtime.CallersFrames(pcs[:n]).Next()
+    return &StackError{
+        Msg:      msg,
+        Cause:    cause,
+        Stack:    pcs[:n],
+        Function: frame.Function,
+        File:     frame.File,
+        Line:     frame.Line,
+    }
+}
+
+// Optional: formatting constructor
+func NewStackErrorf(format string, args ...interface{}) *StackError {
+    return NewStackError(fmt.Sprintf(format, args...), nil)
+}
+```
+
+## Usage Example
+```go
+if err := doSomething(); err != nil {
+    return NewStackError("failed to do something", err)
+}
+```
+
+## Best Practices
+- Always use `NewStackError` (or `NewStackErrorf`) to create stacktraceable errors
+- Wrap underlying errors to preserve the error chain
+- Use `StackTrace()`, `Function`, `File`, and `Line` for debugging/logging, not for user-facing messages
+- Avoid leaking sensitive information in error messages or stack traces
+- Use error codes or metadata if needed for more structured error handling
+
+---
+
+Note: This rule ensures all errors are traceable, debuggable, and compatible with Go's error handling idioms. For code generation, follow this pattern for all custom error types.
+ 
