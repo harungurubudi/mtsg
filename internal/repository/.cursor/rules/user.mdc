@@ -1,0 +1,41 @@
+# User Repository Rule
+
+This rule defines the requirements for the user repository, which abstracts user data access in the application.
+
+## Purpose
+- Provide an interface for retrieving user data by email
+- Enable authentication and user lookup without coupling to a specific data source
+- Facilitate testing and development with a fake/in-memory implementation
+
+## Interface
+- **UserRepository**
+  - `GetOneByEmail(ctx context.Context, email user.Email) (*user.User, error)`
+    - Retrieves a user by email. Returns the user if found, or an error (e.g., `ErrUserNotFound`) if not found.
+  - // Future: Add methods like `GetByID`, `ListByTenant`, etc. as needed.
+
+## Implementation
+- For now, implement a fake/in-memory repository (e.g., `UserPersistence` or `FakeUserRepository`)
+- The fake repository should contain two hardcoded users with different emails
+- `GetOneByEmail` should return the matching user or `ErrUserNotFound` if not found
+- No real database or persistent storage is used at this stage
+- Place all repository mocks in the shared `testmock` package for reusability
+
+## Example Usage
+```go
+repo := repository.NewUserPersistence()
+user, err := repo.GetOneByEmail(ctx, "user1@example.com")
+```
+
+## Best Practices
+- Keep the interface and fake implementation simple and focused
+- Make it easy to swap in a real database implementation later
+- Use dependency injection to provide the repository to services
+- Return domain-meaningful errors (e.g., `ErrUserNotFound`), not raw storage errors
+
+---
+
+Reference: See repository layer rule for more context and best practices.
+description:
+globs:
+alwaysApply: false
+---

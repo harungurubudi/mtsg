@@ -13,7 +13,22 @@ This rules describes about **user** entity and it's behaviour
 - Role: Enumerated string of "admin", "member", default("member") - constructor input
 - CipherText: CipherText - Default: "", secret
 - Status: Enumerated string of "active", "inactive", default("active")
+
 ---
+
+## Validation Rules
+- Email must be valid format
+- Name is required
+- Status must be one of "active" or "inactive"
+- Role must be one of "admin" or "member"
+
+## Business Logic
+- Only "active" users can log in
+- Only "admin" users can manage tenants
+- Add allowed status/role transitions here as needed
+
+## Extensibility
+- To add new fields or behaviors, extend this rule and reference related rules (e.g., password reset, email verification)
 
 Note: This entity definition follows the meta-rules in `entity.mdc` for code generation. For validation rules (e.g., required fields) or business logic (e.g., allowed status transitions), add a section below or reference a related rule file.
 

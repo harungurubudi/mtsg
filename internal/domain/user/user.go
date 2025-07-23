@@ -1,10 +1,15 @@
 package user
 
 import (
+	"errors"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/harungurubudi/mtsg/internal/domain/tenant"
+)
+
+var (
+	ErrUserNotFound error = errors.New("user not found")
 )
 
 // UserID represents the unique identity of a user.
