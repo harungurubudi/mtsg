@@ -15,7 +15,7 @@ import (
 type GeneratorTestSuite struct {
 	suite.Suite
 	mockRedis *testmock.MockRedisAdapter
-	generator *token.Generator
+	generator token.GeneratorRepository
 	ctx       context.Context
 	key       string
 }
