@@ -1,0 +1,109 @@
+# Authentication Usecase Rule
+
+This rule defines the requirements for authentication-related usecases in the application, including login, logout, token refresh, and password management.
+
+description: Defines authentication usecase requirements, interfaces, dependencies, error handling, and best practices for user authentication workflows.
+globs:
+alwaysApply: false
+
+## Purpose
+- Handle user authentication workflows (login, logout, token refresh)
+- Manage user sessions and token lifecycle
+- Provide secure password reset and account recovery
+- Orchestrate interactions between user repository, token generator, and authentication domain
+
+## Usecases
+
+### LoginUsecase
+- **Purpose:** Authenticate user credentials and create a session with access/refresh tokens
+- **Dependencies:** `UserRepository`, `TokenGenerator`
+- **Input:** `authentication.Credential` (email, password)
+- **Output:** `authentication.Session` (access token, refresh token) or error
+- **Workflow:**
+  1. Validate user credentials against repository
+  2. Generate access token with user claims
+  3. Generate refresh token linked to access token
+  4. Return session with both tokens
+
+### LogoutUsecase
+- **Purpose:** Invalidate user session by revoking tokens
+- **Dependencies:** `TokenGenerator`
+- **Input:** `token.Token` (access token)
+- **Output:** Success/error
+- **Workflow:**
+  1. Validate and extract claims from access token
+  2. Revoke access token
+  3. Revoke linked refresh token (if exists)
+
+### RefreshTokenUsecase
+- **Purpose:** Generate new access token using valid refresh token
+- **Dependencies:** `UserRepository`, `TokenGenerator`
+- **Input:** `token.Token` (refresh token)
+- **Output:** `authentication.Session` (new access token, same refresh token) or error
+- **Workflow:**
+  1. Validate refresh token and extract user claims
+  2. Verify user still exists and is active
+  3. Generate new access token
+  4. Return session with new access token
+
+### ValidateTokenUsecase
+- **Purpose:** Validate access token and return user context
+- **Dependencies:** `TokenGenerator`, `UserRepository`
+- **Input:** `token.Token` (access token)
+- **Output:** `authentication.UserContext` (user info, permissions) or error
+- **Workflow:**
+  1. Validate token and extract claims
+  2. Fetch current user data from repository
+  3. Verify user is still active
+  4. Return user context with permissions
+
+## Interface Example
+```go
+// LoginUsecase handles user authentication and session creation.
+type LoginUsecase interface {
+    Login(ctx context.Context, cred authentication.Credential) (*authentication.Session, error)
+}
+
+// LogoutUsecase handles user session termination.
+type LogoutUsecase interface {
+    Logout(ctx context.Context, accessToken token.Token) error
+}
+
+// RefreshTokenUsecase handles token refresh workflow.
+type RefreshTokenUsecase interface {
+    Refresh(ctx context.Context, refreshToken token.Token) (*authentication.Session, error)
+}
+
+// ValidateTokenUsecase handles token validation and user context retrieval.
+type ValidateTokenUsecase interface {
+    Validate(ctx context.Context, accessToken token.Token) (*authentication.UserContext, error)
+}
+```
+
+## Error Handling
+- Return `authentication.InvalidCredential` for invalid email/password
+- Return `token.ErrTokenNotFound` for invalid/expired tokens
+- Return `authentication.UserInactive` for inactive users
+- Return `authentication.InsufficientPermissions` for permission violations
+
+## Best Practices
+- Always validate user status (active/inactive) before authentication
+- Use secure token generation with appropriate expiration times
+- Implement proper error handling with domain-specific errors
+- Write comprehensive unit tests with mocked dependencies
+- Log authentication events for security monitoring
+- Follow the principle of least privilege for token claims
+
+## Dependencies
+- `repository.UserRepository` - for user data access
+- `pkg/token.TokenGenerator` - for token operations
+- `internal/domain/authentication` - for domain types and errors
+
+---
+
+Reference: See usecase layer rule for general patterns and best practices.
+description:
+globs:
+alwaysApply: false
+---
+ 

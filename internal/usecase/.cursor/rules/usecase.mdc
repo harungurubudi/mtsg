@@ -1,0 +1,54 @@
+# Usecase Layer Rule
+
+This rule defines the standards and best practices for the usecase (application) layer in the project, following Clean Architecture principles.
+
+description: Defines usecase layer responsibilities, interface/implementation patterns, naming conventions, dependency injection, and best practices for Clean Architecture.
+globs:
+alwaysApply: false
+
+## Purpose
+- Encapsulate application-specific business logic and workflows
+- Orchestrate interactions between domain entities, repositories, and external services
+- Serve as the main entry point for application logic (e.g., authentication, user registration, project management)
+- Decouple domain logic from delivery (API, CLI, etc.) and infrastructure
+
+## Structure
+- Each usecase should be defined as an interface (e.g., `LoginUsecase`, `RegisterUserUsecase`)
+- Provide a concrete implementation for each usecase (e.g., `loginUsecaseImpl`, `registerUserUsecaseImpl`)
+- Use dependency injection to provide repositories, services, and other dependencies to usecases
+- Group related usecases in the same package or file for clarity
+
+## Naming Conventions
+- Use `XxxUsecase` for interfaces (e.g., `LoginUsecase`)
+- Use `NewXxxUsecase` for constructors
+- Use `xxxUsecaseImpl` or simply `usecase` for concrete implementations
+
+## Interface Example
+```go
+// LoginUsecase defines the login workflow.
+type LoginUsecase interface {
+    Login(ctx context.Context, cred authentication.Credential) (*authentication.Session, error)
+}
+
+// loginUsecaseImpl is the concrete implementation.
+type loginUsecaseImpl struct {
+    userRepo repository.UserRepository
+    tokenGen token.TokenGenerator
+}
+
+func NewLoginUsecase(userRepo repository.UserRepository, tokenGen token.TokenGenerator) LoginUsecase {
+    return &loginUsecaseImpl{userRepo: userRepo, tokenGen: tokenGen}
+}
+```
+
+## Best Practices
+- Keep usecase logic focused and cohesive; avoid mixing unrelated concerns
+- Use dependency injection for all external dependencies (repositories, services, etc.)
+- Return domain-meaningful errors, not infrastructure or storage errors
+- Write unit tests for all usecases, using mocks for dependencies
+- Document each usecase’s purpose and workflow
+- Extend usecases by adding new interfaces/implementations as needed
+
+---
+
+Reference: See repository and domain rules for more context and best practices.
