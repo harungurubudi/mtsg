@@ -1,0 +1,66 @@
+# HTTP Error Handling Specification
+
+## Goals
+- Provide **structured errors** for HTTP responses with fields:
+  - `StatusCode` (int): HTTP status code (e.g., 404, 500)
+  - `Code` (string): Machine-readable error code (e.g., `not_found`)
+  - `Message` (string): Human-readable error message.
+- Preserve **stack trace information** for unexpected or unhandled errors.
+- Separate **business errors** (controlled errors) from **internal errors** (traceable).
+
+---
+
+## Error Types
+
+### HTTPError
+- Represents controlled errors that map directly to an HTTP response.
+- Should be used for validation errors, not found errors, unauthorized, etc.
+- Does **not** contain stack trace.
+
+**Fields:**
+- `StatusCode int`
+- `Code string`
+- `Message string`
+
+**Example:**
+```go
+var ErrNotFound = &HTTPError{
+    StatusCode: 404,
+    Code:       "not_found",
+    Message:    "Data not found",
+}
+
+```
+
+**Methods:**
+```go
+// Error implements the error interface
+func (e *HTTPError) Error() string
+
+// GetStatusCode returns the HTTP status code
+func (e *HTTPError) GetStatusCode() int
+
+// GetCode returns the machine-readable error code
+func (e *HTTPError) GetCode() string
+```
+
+**Constructors:**
+```go
+// NewHTTPError creates a new HTTPError with the given parameters
+func NewHTTPError(statusCode int, code, message string) *HTTPError
+
+// NewNotFoundError creates a 404 Not Found error
+func NewNotFoundError(message string) *HTTPError
+
+// NewValidationError creates a 400 Bad Request validation error
+func NewValidationError(message string) *HTTPError
+
+// NewUnauthorizedError creates a 401 Unauthorized error
+func NewUnauthorizedError(message string) *HTTPError
+
+// NewForbiddenError creates a 403 Forbidden error
+func NewForbiddenError(message string) *HTTPError
+
+// NewInternalServerError creates a 500 Internal Server Error
+func NewInternalServerError(message string) *HTTPError
+```
