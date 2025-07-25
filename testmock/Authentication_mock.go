@@ -8,6 +8,9 @@ import (
 	"context"
 
 	"github.com/harungurubudi/mtsg/internal/domain/authentication"
+	"github.com/harungurubudi/mtsg/internal/domain/tenant"
+	"github.com/harungurubudi/mtsg/internal/domain/user"
+	"github.com/harungurubudi/mtsg/pkg/token"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -102,6 +105,86 @@ func (_c *MockAuthentication_Login_Call) Return(session *authentication.Session,
 }
 
 func (_c *MockAuthentication_Login_Call) RunAndReturn(run func(ctx context.Context, credential *authentication.Credential) (*authentication.Session, error)) *MockAuthentication_Login_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// VerifyToken provides a mock function for the type MockAuthentication
+func (_mock *MockAuthentication) VerifyToken(ctx context.Context, token1 token.Token, subject string, tenantID tenant.TenantID) (*user.User, error) {
+	ret := _mock.Called(ctx, token1, subject, tenantID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for VerifyToken")
+	}
+
+	var r0 *user.User
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, token.Token, string, tenant.TenantID) (*user.User, error)); ok {
+		return returnFunc(ctx, token1, subject, tenantID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, token.Token, string, tenant.TenantID) *user.User); ok {
+		r0 = returnFunc(ctx, token1, subject, tenantID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*user.User)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, token.Token, string, tenant.TenantID) error); ok {
+		r1 = returnFunc(ctx, token1, subject, tenantID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockAuthentication_VerifyToken_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'VerifyToken'
+type MockAuthentication_VerifyToken_Call struct {
+	*mock.Call
+}
+
+// VerifyToken is a helper method to define mock.On call
+//   - ctx context.Context
+//   - token1 token.Token
+//   - subject string
+//   - tenantID tenant.TenantID
+func (_e *MockAuthentication_Expecter) VerifyToken(ctx interface{}, token1 interface{}, subject interface{}, tenantID interface{}) *MockAuthentication_VerifyToken_Call {
+	return &MockAuthentication_VerifyToken_Call{Call: _e.mock.On("VerifyToken", ctx, token1, subject, tenantID)}
+}
+
+func (_c *MockAuthentication_VerifyToken_Call) Run(run func(ctx context.Context, token1 token.Token, subject string, tenantID tenant.TenantID)) *MockAuthentication_VerifyToken_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 token.Token
+		if args[1] != nil {
+			arg1 = args[1].(token.Token)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		var arg3 tenant.TenantID
+		if args[3] != nil {
+			arg3 = args[3].(tenant.TenantID)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *MockAuthentication_VerifyToken_Call) Return(user1 *user.User, err error) *MockAuthentication_VerifyToken_Call {
+	_c.Call.Return(user1, err)
+	return _c
+}
+
+func (_c *MockAuthentication_VerifyToken_Call) RunAndReturn(run func(ctx context.Context, token1 token.Token, subject string, tenantID tenant.TenantID) (*user.User, error)) *MockAuthentication_VerifyToken_Call {
 	_c.Call.Return(run)
 	return _c
 }

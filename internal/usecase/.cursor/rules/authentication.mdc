@@ -22,9 +22,11 @@ Separate business error (HttpError of pkg/error/http) and internal error (StackE
 ## Error Mapping
 - authentication.ErrInvalidCredential → 401 Unauthorized (warn level)
 - authentication.ErrUserNotFound → 401 Unauthorized (warn level) 
-- authentication.ErrAccountLocked → 403 Forbidden (warn level)
 - authentication.ErrUserInactive → 403 Forbidden (warn level)
 - authentication.ErrPasswordExpired → 401 Unauthorized (warn level)
+- authentication.ErrInvalidAuthentication → 401 Unauthorized (warn level)
+- authentication.ErrForbidden → 403 Forbidden (warn level)
+- authentication.ErrTenantMismatch → 403 Forbidden (warn level)
 
 ## Methods
 
@@ -45,14 +47,13 @@ It resulted :
 - *authentication.Session object  
 - Error. It can be : 
   - authentication.ErrInvalidCredential
-  - authentication.ErrAccountLocked
   - authentication.ErrUserInactive
   - or any unhandled error
 
 It has flow : 
 1. Find matchedUser by email (return ErrUserNotFound if not found)
 2. Verify Password via credential.Verify (returns ErrInvalidCredential if failed)
-3. Ensure matchedUser is active (return ErrUserInactive if not active, ErrAccountLocked if locked)
+3. Ensure matchedUser is active (return ErrUserInactive if not active)
 4. Generate access and refresh token in Session result. With specification like this
    - make sure session generation process separated in a function to improve process readability.
    - SessionGenerate function has args : ctx context.Context and matchedUser. And returns : Session and error
@@ -61,4 +62,27 @@ It has flow :
 5. Return Session
 
 ---
- 
+
+### Verify Token
+
+Verify if token is valid for a specific subject and tenantID. Returns matched user object on positive case.
+
+It has arguments : 
+- ctx context.Context
+- token token.Token
+- subject string, desired subject
+- tenantID tenant.TenantID
+
+It resulted :
+- *user.User matched user with the payload
+- Error, it can be : 
+  - authentication.ErrInvalidAuthentication
+  - authentication.ErrForbidden
+  - authentication.ErrTenantMismatch
+
+It has flow : 
+1. Verify if token is valid for the subject using tokenGen.Validate()
+2. If valid, get matched user from UserID in the token claim using userRepo.GetOneByID(). Otherwise, return authentication.ErrInvalidAuthentication
+3. On success, check if returned user has TenantID equal with required tenantID in the args. Then go to step 5
+4. On error, check if the error is user.ErrUserNotFound. If yes, return authentication.ErrInvalidAuthentication. If not, wrap the error with stackerror.NewStackError function 
+5. If tenantID is matched, return the user. Otherwise return authentication.ErrTenantMismatch

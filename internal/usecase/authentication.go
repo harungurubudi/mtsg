@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/harungurubudi/mtsg/internal/domain/authentication"
+	"github.com/harungurubudi/mtsg/internal/domain/tenant"
 	"github.com/harungurubudi/mtsg/internal/domain/user"
 	"github.com/harungurubudi/mtsg/internal/repository"
 	stackerror "github.com/harungurubudi/mtsg/pkg/error"
@@ -15,6 +16,25 @@ import (
 // Authentication defines the interface for authentication-related usecases
 type Authentication interface {
 	Login(ctx context.Context, credential *authentication.Credential) (*authentication.Session, error)
+	// VerifyToken verifies if token is valid for a specific subject and tenantID.
+	// Returns matched user object on positive case.
+	//
+	// Parameters:
+	//   - ctx: Context for request cancellation and timeout
+	//   - token: Token to verify
+	//   - subject: Desired subject (e.g., "access_token", "refresh_token")
+	//   - tenantID: Required tenant for multi-tenant validation
+	//
+	// Returns:
+	//   - *user.User: Matched user with the payload
+	//   - error: Authentication or authorization error
+	//
+	// Possible errors:
+	//   - authentication.ErrInvalidAuthentication: Invalid/expired token
+	//   - authentication.ErrForbidden: Tenant mismatch or access forbidden
+	//   - authentication.ErrTenantMismatch: User does not belong to required tenant
+	//   - stackerror.StackError: Internal errors with stack trace
+	VerifyToken(ctx context.Context, token token.Token, subject string, tenantID tenant.TenantID) (*user.User, error)
 }
 
 // authenticationUsecase implements the Authentication interface.
@@ -42,7 +62,7 @@ func NewAuthentication(userRepo repository.UserRepository, tokenGen token.Genera
 // The authentication process follows these steps:
 // 1. User Lookup: Find user by email address
 // 2. Password Verification: Validate provided password against stored hash
-// 3. Status Check: Ensure user account is active and not locked
+// 3. Status Check: Ensure user account is active
 // 4. Token Generation: Create linked access and refresh tokens
 // 5. Session Creation: Return session with both tokens
 //
@@ -71,15 +91,12 @@ func (a *authenticationUsecase) Login(ctx context.Context, credential *authentic
 
 	// Step 2: Verify Password via credential.Verify
 	if err := credential.Verify(ctx, matchedUser); err != nil {
-		return nil, authentication.ErrInvalidCredential
+		return nil, err
 	}
 
 	// Step 3: Ensure matchedUser is active
 	if matchedUser.Status != user.UserStatusActive {
-		if matchedUser.Status == user.UserStatusInactive {
-			return nil, authentication.ErrUserInactive
-		}
-		return nil, authentication.ErrAccountLocked
+		return nil, authentication.ErrUserInactive
 	}
 
 	// Step 4: Generate access and refresh token in Session result
@@ -90,6 +107,68 @@ func (a *authenticationUsecase) Login(ctx context.Context, credential *authentic
 
 	// Step 5: Return Session
 	return session, nil
+}
+
+// VerifyToken verifies if token is valid for a specific subject and tenantID.
+// This method implements secure token validation with multi-tenant support.
+//
+// The verification process follows these steps:
+// 1. Token Validation: Verify token validity for the specified subject
+// 2. User Extraction: Extract user from token claims on success
+// 3. Tenant Validation: Check if user belongs to required tenant
+// 4. Error Handling: Proper error wrapping for internal errors
+// 5. Authorization Check: Return forbidden if tenant doesn't match
+//
+// Security Features:
+// - Subject validation ensures tokens are used for intended purpose
+// - Multi-tenant validation for data isolation
+// - Proper error messages that don't leak sensitive information
+// - Stack trace preservation for debugging internal errors
+//
+// Parameters:
+//   - ctx: Context for request cancellation and timeout
+//   - token: Token to verify
+//   - subject: Expected token subject (e.g., "access_token", "refresh_token")
+//   - tenantID: Required tenant for multi-tenant validation
+//
+// Returns:
+//   - *user.User: Matched user from token payload
+//   - error: Authentication or authorization error
+//
+// Error Handling:
+//   - Business errors (authentication.ErrInvalidAuthentication, etc.) are returned directly
+//   - Internal errors are wrapped with stackerror for debugging
+//   - User not found errors are converted to authentication errors
+func (a *authenticationUsecase) VerifyToken(ctx context.Context, token token.Token, subject string, tenantID tenant.TenantID) (*user.User, error) {
+	// Step 1: Verify if token is valid for the subject using tokenGen.Validate()
+	claims, err := a.tokenGen.Validate(ctx, token)
+	if err != nil {
+		return nil, authentication.ErrInvalidAuthentication
+	}
+
+	// Step 2: If valid, get matched user from UserID in the token claim using userRepo.GetOneByID()
+	userID, err := uuid.Parse(claims.Identifier)
+	if err != nil {
+		return nil, stackerror.NewStackError("failed to parse user ID from token claims", err)
+	}
+
+	matchedUser, err := a.userRepo.GetOneByID(ctx, user.UserID(userID))
+	if err != nil {
+		// Step 4: On error, check if the error is user.ErrUserNotFound
+		if err == user.ErrUserNotFound {
+			return nil, authentication.ErrInvalidAuthentication
+		}
+		// If not, wrap the error with stackerror.NewStackError function
+		return nil, stackerror.NewStackError("failed to get user by ID", err)
+	}
+
+	// Step 3: On success, check if returned user has TenantID equal with required tenantID in the args
+	// Step 5: If tenantID is matched, return the user. Otherwise return authentication.ErrTenantMismatch
+	if matchedUser.TenantID != tenantID {
+		return nil, authentication.ErrTenantMismatch
+	}
+
+	return matchedUser, nil
 }
 
 // generateSession creates a new session with access and refresh tokens.

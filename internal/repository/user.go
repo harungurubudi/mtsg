@@ -13,6 +13,8 @@ import (
 type UserRepository interface {
 	// GetOneByEmail retrieves a user by email. Returns the user if found, or an error if not found.
 	GetOneByEmail(ctx context.Context, email userdomain.Email) (*userdomain.User, error)
+	// GetOneByID retrieves a user by ID. Returns the user if found, or an error if not found.
+	GetOneByID(ctx context.Context, userID userdomain.UserID) (*userdomain.User, error)
 }
 
 // UserPersistence is the current in-memory implementation of UserRepository for testing and simulation.
@@ -54,6 +56,16 @@ func NewUserPersistence() *UserPersistence {
 func (r *UserPersistence) GetOneByEmail(ctx context.Context, email userdomain.Email) (*userdomain.User, error) {
 	for _, u := range r.users {
 		if u.Email == email {
+			return &u, nil
+		}
+	}
+	return nil, userdomain.ErrUserNotFound
+}
+
+// GetOneByID returns the user with the given ID, or an error if not found.
+func (r *UserPersistence) GetOneByID(ctx context.Context, userID userdomain.UserID) (*userdomain.User, error) {
+	for _, u := range r.users {
+		if u.ID == userID {
 			return &u, nil
 		}
 	}
