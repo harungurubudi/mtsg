@@ -11,9 +11,9 @@ Definition: User password. Should be at least 8 characters long, contain 1 UPPER
 - Type: string (custom type recommended, e.g., `type Password string`)
 - Has validate method with boolean result to make sure it is complied the password specificaton. Otherwise, return Ffalse
 
-## Ciphertext
+## CipherText
 Definition: Hashed version of password. Constructed from Password using a secure hash algorithm (e.g., bcrypt with at least 10 rounds). Must provide a method to check if a Password matches the hash.
-- Type: string (custom type recommended, e.g., `type Ciphertext string`)
+- Type: string (custom type recommended, e.g., `type CipherText string`)
 - Construction: From Password, using a secure hash algorithm
 - Validation: Must provide a method to check if a Password matches the hash
 

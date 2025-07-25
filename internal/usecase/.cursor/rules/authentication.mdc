@@ -2,108 +2,87 @@
 
 This rule defines the requirements for authentication-related usecases in the application, including login, logout, token refresh, and password management.
 
-description: Defines authentication usecase requirements, interfaces, dependencies, error handling, and best practices for user authentication workflows.
-globs:
-alwaysApply: false
-
 ## Purpose
 - Handle user authentication workflows (login, logout, token refresh)
 - Manage user sessions and token lifecycle
 - Provide secure password reset and account recovery
 - Orchestrate interactions between user repository, token generator, and authentication domain
 
-## Usecases
+## Code 
 
-### LoginUsecase
-- **Purpose:** Authenticate user credentials and create a session with access/refresh tokens
-- **Dependencies:** `UserRepository`, `TokenGenerator`
-- **Input:** `authentication.Credential` (email, password)
-- **Output:** `authentication.Session` (access token, refresh token) or error
-- **Workflow:**
-  1. Validate user credentials against repository
-  2. Generate access token with user claims
-  3. Generate refresh token linked to access token
-  4. Return session with both tokens
-
-### LogoutUsecase
-- **Purpose:** Invalidate user session by revoking tokens
-- **Dependencies:** `TokenGenerator`
-- **Input:** `token.Token` (access token)
-- **Output:** Success/error
-- **Workflow:**
-  1. Validate and extract claims from access token
-  2. Revoke access token
-  3. Revoke linked refresh token (if exists)
-
-### RefreshTokenUsecase
-- **Purpose:** Generate new access token using valid refresh token
-- **Dependencies:** `UserRepository`, `TokenGenerator`
-- **Input:** `token.Token` (refresh token)
-- **Output:** `authentication.Session` (new access token, same refresh token) or error
-- **Workflow:**
-  1. Validate refresh token and extract user claims
-  2. Verify user still exists and is active
-  3. Generate new access token
-  4. Return session with new access token
-
-### ValidateTokenUsecase
-- **Purpose:** Validate access token and return user context
-- **Dependencies:** `TokenGenerator`, `UserRepository`
-- **Input:** `token.Token` (access token)
-- **Output:** `authentication.UserContext` (user info, permissions) or error
-- **Workflow:**
-  1. Validate token and extract claims
-  2. Fetch current user data from repository
-  3. Verify user is still active
-  4. Return user context with permissions
-
-## Interface Example
-```go
-// LoginUsecase handles user authentication and session creation.
-type LoginUsecase interface {
-    Login(ctx context.Context, cred authentication.Credential) (*authentication.Session, error)
-}
-
-// LogoutUsecase handles user session termination.
-type LogoutUsecase interface {
-    Logout(ctx context.Context, accessToken token.Token) error
-}
-
-// RefreshTokenUsecase handles token refresh workflow.
-type RefreshTokenUsecase interface {
-    Refresh(ctx context.Context, refreshToken token.Token) (*authentication.Session, error)
-}
-
-// ValidateTokenUsecase handles token validation and user context retrieval.
-type ValidateTokenUsecase interface {
-    Validate(ctx context.Context, accessToken token.Token) (*authentication.UserContext, error)
-}
-```
+This rule define one interface of Authentication and one struct which is implementation of the interface. The implementation depends on.
+- repository.UserRepository from internal/repository
+- token.GeneratorRepository from pkg/token
 
 ## Error Handling
-- Return `authentication.InvalidCredential` for invalid email/password
-- Return `token.ErrTokenNotFound` for invalid/expired tokens
-- Return `authentication.UserInactive` for inactive users
-- Return `authentication.InsufficientPermissions` for permission violations
+Separate business error (HttpError of pkg/error/http) and internal error (StackError of pkg/error/stackerror). 
+- Internal error should be unexpected error like dependency error from database or redis. It always return 500 internal server error and writes log as a stacktrace
+- Business error should be defined error in business (domain) layer. Only 401, 403 writes in warn level. 400 writes in debug level. Others doesn't write log to prevent log fatigue.
 
-## Best Practices
-- Always validate user status (active/inactive) before authentication
-- Use secure token generation with appropriate expiration times
-- Implement proper error handling with domain-specific errors
-- Write comprehensive unit tests with mocked dependencies
-- Log authentication events for security monitoring
-- Follow the principle of least privilege for token claims
+## Error Mapping
+- authentication.ErrInvalidCredential → 401 Unauthorized (warn level)
+- authentication.ErrUserNotFound → 401 Unauthorized (warn level) 
+- authentication.ErrUserInactive → 403 Forbidden (warn level)
+- authentication.ErrPasswordExpired → 401 Unauthorized (warn level)
+- authentication.ErrInvalidAuthentication → 401 Unauthorized (warn level)
+- authentication.ErrForbidden → 403 Forbidden (warn level)
+- authentication.ErrTenantMismatch → 403 Forbidden (warn level)
 
-## Dependencies
-- `repository.UserRepository` - for user data access
-- `pkg/token.TokenGenerator` - for token operations
-- `internal/domain/authentication` - for domain types and errors
+## Methods
+
+The interface and implementation should cover these method : 
+
+### Login 
+
+Do login with credential. 
+
+Involved package : 
+- authentication: `internal/domain/user/authentication`
+
+It has arguments : 
+- ctx context.Context
+- credential *authentication.Credential
+
+It resulted : 
+- *authentication.Session object  
+- Error. It can be : 
+  - authentication.ErrInvalidCredential
+  - authentication.ErrUserInactive
+  - or any unhandled error
+
+It has flow : 
+1. Find matchedUser by email (return ErrUserNotFound if not found)
+2. Verify Password via credential.Verify (returns ErrInvalidCredential if failed)
+3. Ensure matchedUser is active (return ErrUserInactive if not active)
+4. Generate access and refresh token in Session result. With specification like this
+   - make sure session generation process separated in a function to improve process readability.
+   - SessionGenerate function has args : ctx context.Context and matchedUser. And returns : Session and error
+   - access token (has AccessTokenSubject. see authentication package) should be expired in 2 hours. It holds information of matchedUser UserID and RefreshToken as LinkedToken.
+   - refresh token (has RefreshTokenSubject. see authentication package) should be expired in 2 days, nbf in 2 hours (on access token expired). It holds information of matchedUser UserID and AccessToken as LinkedToken.
+5. Return Session
 
 ---
 
-Reference: See usecase layer rule for general patterns and best practices.
-description:
-globs:
-alwaysApply: false
----
- 
+### Verify Token
+
+Verify if token is valid for a specific subject and tenantID. Returns matched user object on positive case.
+
+It has arguments : 
+- ctx context.Context
+- token token.Token
+- subject string, desired subject
+- tenantID tenant.TenantID
+
+It resulted :
+- *user.User matched user with the payload
+- Error, it can be : 
+  - authentication.ErrInvalidAuthentication
+  - authentication.ErrForbidden
+  - authentication.ErrTenantMismatch
+
+It has flow : 
+1. Verify if token is valid for the subject using tokenGen.Validate()
+2. If valid, get matched user from UserID in the token claim using userRepo.GetOneByID(). Otherwise, return authentication.ErrInvalidAuthentication
+3. On success, check if returned user has TenantID equal with required tenantID in the args. Then go to step 5
+4. On error, check if the error is user.ErrUserNotFound. If yes, return authentication.ErrInvalidAuthentication. If not, wrap the error with stackerror.NewStackError function 
+5. If tenantID is matched, return the user. Otherwise return authentication.ErrTenantMismatch

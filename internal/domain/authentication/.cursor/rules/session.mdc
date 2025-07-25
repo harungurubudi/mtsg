@@ -1,0 +1,35 @@
+# Session 
+
+This rule defines the structure and requirements for session in the authentication package.
+
+## Session Object
+Represents the output of a successful authentication (login), containing issued tokens.
+
+- **Fields:**
+  - AccessToken: type `token.Token` (referenced from token package)
+  - RefreshToken: type `token.Token` (referenced from token package)
+- **Best Practices:**
+  - AccessToken is used for short-lived API access
+  - RefreshToken is used to obtain new access tokens
+  - Consider implementing refresh token rotation for enhanced security
+  - Do not expose sensitive token details in logs or user-facing messages
+
+## Token Subject Constants
+- **AccessTokenSubject**: Constant string value representing the subject for access tokens (e.g., "access_token").
+- **RefreshTokenSubject**: Constant string value representing the subject for refresh tokens (e.g., "refresh_token").
+- **Usage**: These constants should be used as the `Subject` field in token claims to distinguish between access and refresh tokens throughout the authentication flow.
+
+## Example Usage
+```go
+const (
+    AccessTokenSubject  = "access_token"
+    RefreshTokenSubject = "refresh_token"
+)
+
+// Session output after successful login
+type Session struct {
+    AccessToken  token.Token `json:"access_token"`
+    RefreshToken token.Token `json:"refresh_token"`
+}
+```
+
