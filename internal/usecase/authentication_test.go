@@ -689,3 +689,117 @@ func (suite *AuthenticationTestSuite) TestRefreshToken_InvalidUserID() {
 	assert.Nil(suite.T(), newSession)
 	assert.Contains(suite.T(), err.Error(), "failed to parse user ID from refresh token claims")
 }
+
+// TestLogout_Success tests successful logout scenario
+func (suite *AuthenticationTestSuite) TestLogout_Success() {
+	// Arrange
+	ctx := context.Background()
+	mockUserRepo := testmock.NewMockUserRepository(suite.T())
+	mockTokenGen := testmock.NewMockGeneratorRepository(suite.T())
+
+	accessToken := token.Token("valid_access_token")
+	expectedClaims := &token.Claims{
+		Subject:     authentication.AccessTokenSubject,
+		Identifier:  uuid.New().String(),
+		EXP:         time.Now().Add(time.Hour).Unix(),
+		LinkedToken: "linked_refresh_token",
+		JTI:         uuid.New(),
+	}
+
+	// Mock expectations
+	mockTokenGen.EXPECT().Validate(ctx, accessToken).Return(expectedClaims, nil)
+	mockTokenGen.EXPECT().Revoke(ctx, accessToken).Return(nil)
+	mockTokenGen.EXPECT().Revoke(ctx, token.Token("linked_refresh_token")).Return(nil)
+
+	// Create usecase
+	authUsecase := NewAuthentication(mockUserRepo, mockTokenGen)
+
+	// Act
+	err := authUsecase.Logout(ctx, accessToken)
+
+	// Assert
+	assert.NoError(suite.T(), err)
+}
+
+// TestLogout_InvalidToken tests logout with invalid token (silent failure)
+func (suite *AuthenticationTestSuite) TestLogout_InvalidToken() {
+	// Arrange
+	ctx := context.Background()
+	mockUserRepo := testmock.NewMockUserRepository(suite.T())
+	mockTokenGen := testmock.NewMockGeneratorRepository(suite.T())
+
+	accessToken := token.Token("invalid_access_token")
+
+	// Mock expectations
+	mockTokenGen.EXPECT().Validate(ctx, accessToken).Return(nil, errors.New("invalid token"))
+
+	// Create usecase
+	authUsecase := NewAuthentication(mockUserRepo, mockTokenGen)
+
+	// Act
+	err := authUsecase.Logout(ctx, accessToken)
+
+	// Assert
+	assert.NoError(suite.T(), err) // Silent failure for security
+}
+
+// TestLogout_NoLinkedToken tests logout when access token has no linked refresh token
+func (suite *AuthenticationTestSuite) TestLogout_NoLinkedToken() {
+	// Arrange
+	ctx := context.Background()
+	mockUserRepo := testmock.NewMockUserRepository(suite.T())
+	mockTokenGen := testmock.NewMockGeneratorRepository(suite.T())
+
+	accessToken := token.Token("valid_access_token_no_linked")
+	expectedClaims := &token.Claims{
+		Subject:     authentication.AccessTokenSubject,
+		Identifier:  uuid.New().String(),
+		EXP:         time.Now().Add(time.Hour).Unix(),
+		LinkedToken: "", // No linked token
+		JTI:         uuid.New(),
+	}
+
+	// Mock expectations
+	mockTokenGen.EXPECT().Validate(ctx, accessToken).Return(expectedClaims, nil)
+	mockTokenGen.EXPECT().Revoke(ctx, accessToken).Return(nil)
+
+	// Create usecase
+	authUsecase := NewAuthentication(mockUserRepo, mockTokenGen)
+
+	// Act
+	err := authUsecase.Logout(ctx, accessToken)
+
+	// Assert
+	assert.NoError(suite.T(), err) // Still returns success for security
+}
+
+// TestLogout_RevokeError tests logout when token revocation fails
+func (suite *AuthenticationTestSuite) TestLogout_RevokeError() {
+	// Arrange
+	ctx := context.Background()
+	mockUserRepo := testmock.NewMockUserRepository(suite.T())
+	mockTokenGen := testmock.NewMockGeneratorRepository(suite.T())
+
+	accessToken := token.Token("valid_access_token")
+	expectedClaims := &token.Claims{
+		Subject:     authentication.AccessTokenSubject,
+		Identifier:  uuid.New().String(),
+		EXP:         time.Now().Add(time.Hour).Unix(),
+		LinkedToken: "linked_refresh_token",
+		JTI:         uuid.New(),
+	}
+
+	// Mock expectations
+	mockTokenGen.EXPECT().Validate(ctx, accessToken).Return(expectedClaims, nil)
+	mockTokenGen.EXPECT().Revoke(ctx, accessToken).Return(errors.New("redis error"))
+
+	// Create usecase
+	authUsecase := NewAuthentication(mockUserRepo, mockTokenGen)
+
+	// Act
+	err := authUsecase.Logout(ctx, accessToken)
+
+	// Assert
+	assert.Error(suite.T(), err)
+	assert.Contains(suite.T(), err.Error(), "failed to revoke access token")
+}

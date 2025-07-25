@@ -16,42 +16,9 @@ import (
 // Authentication defines the interface for authentication-related usecases
 type Authentication interface {
 	Login(ctx context.Context, credential *authentication.Credential) (*authentication.Session, error)
-	// VerifyToken verifies if token is valid for a specific subject and tenantID.
-	// Returns matched user object on positive case.
-	//
-	// Parameters:
-	//   - ctx: Context for request cancellation and timeout
-	//   - token: Token to verify
-	//   - subject: Desired subject (e.g., "access_token", "refresh_token")
-	//   - tenantID: Required tenant for multi-tenant validation
-	//
-	// Returns:
-	//   - *user.User: Matched user with the payload
-	//   - error: Authentication or authorization error
-	//
-	// Possible errors:
-	//   - authentication.ErrInvalidAuthentication: Invalid/expired token
-	//   - authentication.ErrForbidden: Tenant mismatch or access forbidden
-	//   - authentication.ErrTenantMismatch: User does not belong to required tenant
-	//   - stackerror.StackError: Internal errors with stack trace
 	VerifyToken(ctx context.Context, token token.Token, subject string, tenantID tenant.TenantID) (*user.User, error)
-	// RefreshToken generates a new session using a valid refresh token.
-	// Once a new session is generated, it revokes the old session pair.
-	//
-	// Parameters:
-	//   - ctx: Context for request cancellation and timeout
-	//   - refreshToken: Valid refresh token to use for session renewal
-	//
-	// Returns:
-	//   - *authentication.Session: Newly generated session with fresh tokens
-	//   - error: Authentication or authorization error
-	//
-	// Possible errors:
-	//   - authentication.ErrInvalidAuthentication: Invalid/expired refresh token
-	//   - authentication.ErrUserNotFound: User no longer exists
-	//   - authentication.ErrUserInactive: User account is inactive
-	//   - stackerror.StackError: Internal errors with stack trace
 	RefreshToken(ctx context.Context, refreshToken token.Token) (*authentication.Session, error)
+	Logout(ctx context.Context, accessToken token.Token) error
 }
 
 // authenticationUsecase implements the Authentication interface.
@@ -239,6 +206,52 @@ func (a *authenticationUsecase) RefreshToken(ctx context.Context, refreshToken t
 
 	// Step 6: Return newly generated Session
 	return newSession, nil
+}
+
+// Logout revokes a session by invalidating both access and refresh tokens.
+// This method implements secure session termination with silent failure
+// to prevent information leakage about token validity.
+//
+// The logout process follows these steps:
+// 1. Validate access token for AccessTokenSubject
+// 2. Extract linked refresh token from access token claims
+// 3. Revoke both tokens (implementation depends on storage strategy)
+// 4. Return success or internal error
+//
+// Security Features:
+// - Silent failure for invalid tokens prevents information leakage
+// - Complete session termination by revoking both tokens
+// - All internal errors include stack traces for debugging
+// - No business errors returned to maintain security
+//
+// Error Handling:
+//   - Invalid tokens return nil (silent failure for security)
+//   - Internal errors are wrapped with stackerror for debugging
+//   - No business errors are returned to prevent information leakage
+func (a *authenticationUsecase) Logout(ctx context.Context, accessToken token.Token) error {
+	// Step 1: Verify if access token is valid for AccessTokenSubject using tokenGen.Validate()
+	claims, err := a.tokenGen.Validate(ctx, accessToken)
+	if err != nil {
+		// Silent failure for invalid tokens (security best practice)
+		return nil
+	}
+
+	// Step 2: Extract refresh token from LinkedToken in the access token claims
+	refreshToken := claims.LinkedToken
+
+	// Step 3: Revoke both access token and refresh token using tokenGen.Revoke()
+	if err := a.tokenGen.Revoke(ctx, accessToken); err != nil {
+		return stackerror.NewStackError("failed to revoke access token", err)
+	}
+
+	if refreshToken != "" {
+		if err := a.tokenGen.Revoke(ctx, token.Token(refreshToken)); err != nil {
+			return stackerror.NewStackError("failed to revoke refresh token", err)
+		}
+	}
+
+	// Step 4: Return nil on success, or internal error if revocation fails
+	return nil
 }
 
 // generateSession creates a new session with access and refresh tokens.

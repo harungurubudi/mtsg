@@ -113,3 +113,27 @@ It has flow :
 6. Return newly generated Session
 
 ---
+
+### Logout
+
+Revoke set of Session (based on access token). This method handles secure session termination
+by invalidating both access and refresh tokens. Uses silent failure for security to prevent
+information leakage about token validity.
+
+It has arguments : 
+- ctx context.Context
+- accessToken token.Token
+
+It resulted :
+- error: Only internal errors (wrapped with stackerror), no business errors
+
+It has flow : 
+1. Verify if access token is valid for AccessTokenSubject using tokenGen.Validate()
+   - If invalid, return nil (silent failure for logout security)
+   - If validation error is internal, wrap with stackerror and return
+2. Extract refresh token from LinkedToken in the access token claims
+3. Revoke both access token and refresh token (implementation depends on storage strategy)
+   - Consider Redis blacklist, database flags, or token store invalidation
+4. Return nil on success, or internal error if revocation fails
+
+---

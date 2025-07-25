@@ -109,6 +109,63 @@ func (_c *MockAuthentication_Login_Call) RunAndReturn(run func(ctx context.Conte
 	return _c
 }
 
+// Logout provides a mock function for the type MockAuthentication
+func (_mock *MockAuthentication) Logout(ctx context.Context, accessToken token.Token) error {
+	ret := _mock.Called(ctx, accessToken)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Logout")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, token.Token) error); ok {
+		r0 = returnFunc(ctx, accessToken)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockAuthentication_Logout_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Logout'
+type MockAuthentication_Logout_Call struct {
+	*mock.Call
+}
+
+// Logout is a helper method to define mock.On call
+//   - ctx context.Context
+//   - accessToken token.Token
+func (_e *MockAuthentication_Expecter) Logout(ctx interface{}, accessToken interface{}) *MockAuthentication_Logout_Call {
+	return &MockAuthentication_Logout_Call{Call: _e.mock.On("Logout", ctx, accessToken)}
+}
+
+func (_c *MockAuthentication_Logout_Call) Run(run func(ctx context.Context, accessToken token.Token)) *MockAuthentication_Logout_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 token.Token
+		if args[1] != nil {
+			arg1 = args[1].(token.Token)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockAuthentication_Logout_Call) Return(err error) *MockAuthentication_Logout_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockAuthentication_Logout_Call) RunAndReturn(run func(ctx context.Context, accessToken token.Token) error) *MockAuthentication_Logout_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // RefreshToken provides a mock function for the type MockAuthentication
 func (_mock *MockAuthentication) RefreshToken(ctx context.Context, refreshToken token.Token) (*authentication.Session, error) {
 	ret := _mock.Called(ctx, refreshToken)
