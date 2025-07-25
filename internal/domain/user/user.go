@@ -15,9 +15,6 @@ var (
 // UserID represents the unique identity of a user.
 type UserID uuid.UUID
 
-// CipherText represents a hashed password.
-type CipherText string
-
 // UserRole represents the role of a user.
 type UserRole string
 
