@@ -86,3 +86,54 @@ It has flow :
 3. On success, check if returned user has TenantID equal with required tenantID in the args. Then go to step 5
 4. On error, check if the error is user.ErrUserNotFound. If yes, return authentication.ErrInvalidAuthentication. If not, wrap the error with stackerror.NewStackError function 
 5. If tenantID is matched, return the user. Otherwise return authentication.ErrTenantMismatch
+
+---
+
+### Refresh Token
+
+Generate a new set of Session with refresh token. Once a new session generated, it revoke old pair of Session (based on refresh token)
+
+It has arguments : 
+- ctx context.Context
+- refreshToken token.Token
+
+It resulted :
+- *authentication.Session newly generated session set
+- Error, it can be : 
+  - authentication.ErrInvalidAuthentication
+  - authentication.ErrUserNotFound
+  - authentication.ErrUserInactive
+
+It has flow : 
+1. Verify if refresh token is valid for RefreshTokenSubject using tokenGen.Validate(). Return ErrInvalidAuthentication if invalid
+2. Extract UserID from token claims and get matched User object using userRepo.GetOneByID()
+3. Check if user exists and is active (return ErrUserNotFound if not found, ErrUserInactive if inactive)
+4. Generate new Session with access and refresh tokens (same as Login flow using generateSession function)
+5. Revoke old session pair (implementation depends on token storage strategy - consider Redis blacklist or database flag)
+6. Return newly generated Session
+
+---
+
+### Logout
+
+Revoke set of Session (based on access token). This method handles secure session termination
+by invalidating both access and refresh tokens. Uses silent failure for security to prevent
+information leakage about token validity.
+
+It has arguments : 
+- ctx context.Context
+- accessToken token.Token
+
+It resulted :
+- error: Only internal errors (wrapped with stackerror), no business errors
+
+It has flow : 
+1. Verify if access token is valid for AccessTokenSubject using tokenGen.Validate()
+   - If invalid, return nil (silent failure for logout security)
+   - If validation error is internal, wrap with stackerror and return
+2. Extract refresh token from LinkedToken in the access token claims
+3. Revoke both access token and refresh token (implementation depends on storage strategy)
+   - Consider Redis blacklist, database flags, or token store invalidation
+4. Return nil on success, or internal error if revocation fails
+
+---
