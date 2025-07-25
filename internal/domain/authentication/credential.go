@@ -7,12 +7,6 @@ import (
 	"github.com/harungurubudi/mtsg/internal/domain/user"
 )
 
-// Token subject constants for distinguishing token types
-const (
-	AccessTokenSubject  = "access_token"
-	RefreshTokenSubject = "refresh_token"
-)
-
 // Error types for specific authentication scenarios
 var (
 	ErrInvalidCredential = errors.New("invalid credentials")
@@ -40,10 +34,4 @@ func (c *Credential) Verify(ctx context.Context, matchedUser *user.User) error {
 		return ErrInvalidCredential
 	}
 	return nil
-}
-
-// Session represents the output of a successful authentication (login), containing issued tokens
-type Session struct {
-	AccessToken  string `json:"access_token"`
-	RefreshToken string `json:"refresh_token"`
 }
