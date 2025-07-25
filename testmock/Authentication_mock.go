@@ -109,6 +109,74 @@ func (_c *MockAuthentication_Login_Call) RunAndReturn(run func(ctx context.Conte
 	return _c
 }
 
+// RefreshToken provides a mock function for the type MockAuthentication
+func (_mock *MockAuthentication) RefreshToken(ctx context.Context, refreshToken token.Token) (*authentication.Session, error) {
+	ret := _mock.Called(ctx, refreshToken)
+
+	if len(ret) == 0 {
+		panic("no return value specified for RefreshToken")
+	}
+
+	var r0 *authentication.Session
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, token.Token) (*authentication.Session, error)); ok {
+		return returnFunc(ctx, refreshToken)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, token.Token) *authentication.Session); ok {
+		r0 = returnFunc(ctx, refreshToken)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*authentication.Session)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, token.Token) error); ok {
+		r1 = returnFunc(ctx, refreshToken)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockAuthentication_RefreshToken_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RefreshToken'
+type MockAuthentication_RefreshToken_Call struct {
+	*mock.Call
+}
+
+// RefreshToken is a helper method to define mock.On call
+//   - ctx context.Context
+//   - refreshToken token.Token
+func (_e *MockAuthentication_Expecter) RefreshToken(ctx interface{}, refreshToken interface{}) *MockAuthentication_RefreshToken_Call {
+	return &MockAuthentication_RefreshToken_Call{Call: _e.mock.On("RefreshToken", ctx, refreshToken)}
+}
+
+func (_c *MockAuthentication_RefreshToken_Call) Run(run func(ctx context.Context, refreshToken token.Token)) *MockAuthentication_RefreshToken_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 token.Token
+		if args[1] != nil {
+			arg1 = args[1].(token.Token)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockAuthentication_RefreshToken_Call) Return(session *authentication.Session, err error) *MockAuthentication_RefreshToken_Call {
+	_c.Call.Return(session, err)
+	return _c
+}
+
+func (_c *MockAuthentication_RefreshToken_Call) RunAndReturn(run func(ctx context.Context, refreshToken token.Token) (*authentication.Session, error)) *MockAuthentication_RefreshToken_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // VerifyToken provides a mock function for the type MockAuthentication
 func (_mock *MockAuthentication) VerifyToken(ctx context.Context, token1 token.Token, subject string, tenantID tenant.TenantID) (*user.User, error) {
 	ret := _mock.Called(ctx, token1, subject, tenantID)
