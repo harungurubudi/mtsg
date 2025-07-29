@@ -1,0 +1,318 @@
+# Echo HTTP Server Rule
+
+## Overview
+Use Echo framework for HTTP server implementation with clean architecture principles, proper middleware configuration, and dependency injection integration.
+
+## Framework Choice
+- **Echo**: Lightweight, fast, and extensible HTTP framework
+- **Benefits**: Built-in middleware, routing, validation, and JSON handling
+- **Integration**: Works seamlessly with Wire DI and Clean Architecture
+
+## Directory Structure
+```
+internal/presentation/http/
+├── server.go           # Server initialization and configuration
+├── handler/            # HTTP handlers (existing)
+├── middleware/         # Custom middleware (existing)
+├── router/            # Route definitions (existing)
+└── .cursor/rules/     # Rules directory
+    └── server.mdc     # This rule file
+```
+
+## Server Configuration
+
+### Server Struct
+```go
+type Server struct {
+    echo    *echo.Echo
+    handlers *handler.Handlers
+    config  *Config
+}
+
+type Config struct {
+    Port         string
+    ReadTimeout  time.Duration
+    WriteTimeout time.Duration
+    IdleTimeout  time.Duration
+}
+```
+
+### Server Initialization
+```go
+func NewServer(handlers *handler.Handlers, config *Config) *Server {
+    e := echo.New()
+    
+    // Configure Echo
+    e.HideBanner = true
+    e.HidePort = true
+    
+    // Set timeouts
+    e.Server.ReadTimeout = config.ReadTimeout
+    e.Server.WriteTimeout = config.WriteTimeout
+    e.Server.IdleTimeout = config.IdleTimeout
+    
+    return &Server{
+        echo:     e,
+        handlers: handlers,
+        config:   config,
+    }
+}
+```
+
+## Middleware Configuration
+
+### Global Middleware
+```go
+func (s *Server) setupMiddleware() {
+    // Recovery middleware for panic handling
+    s.echo.Use(middleware.Recover())
+    
+    // Logger middleware for request logging
+    s.echo.Use(middleware.Logger())
+    
+    // CORS middleware for cross-origin requests
+    s.echo.Use(middleware.CORSWithConfig(middleware.CORSConfig{
+        AllowOrigins: []string{"*"},
+        AllowMethods: []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete},
+        AllowHeaders: []string{echo.HeaderOrigin, echo.HeaderContentType, echo.HeaderAccept, echo.HeaderAuthorization},
+    }))
+    
+    // Custom middleware
+    s.echo.Use(middleware.RequestID())
+    s.echo.Use(middleware.Gzip())
+}
+```
+
+### Custom Middleware
+```go
+// Authentication middleware
+func AuthMiddleware(authUseCase usecase.Authentication) echo.MiddlewareFunc {
+    return func(next echo.HandlerFunc) echo.HandlerFunc {
+        return func(c echo.Context) error {
+            // Extract token from Authorization header
+            authHeader := c.Request().Header.Get("Authorization")
+            if authHeader == "" {
+                return echo.NewHTTPError(http.StatusUnauthorized, "missing authorization header")
+            }
+            
+            // Validate token and set user in context
+            // Implementation depends on your auth strategy
+            
+            return next(c)
+        }
+    }
+}
+```
+
+## Route Configuration
+
+### Route Groups
+```go
+func (s *Server) setupRoutes() {
+    // Health check endpoint
+    s.echo.GET("/health", s.healthCheck)
+    
+    // API v1 routes
+    v1 := s.echo.Group("/api/v1")
+    
+    // Public routes (no auth required)
+    public := v1.Group("")
+    public.POST("/auth/login", s.handlers.Auth.Login)
+    public.POST("/auth/register", s.handlers.Auth.Register)
+    
+    // Protected routes (auth required)
+    protected := v1.Group("")
+    protected.Use(AuthMiddleware(s.handlers.Auth.UseCase))
+    protected.GET("/users/profile", s.handlers.User.GetProfile)
+    protected.PUT("/users/profile", s.handlers.User.UpdateProfile)
+    protected.POST("/auth/logout", s.handlers.Auth.Logout)
+    protected.POST("/auth/refresh", s.handlers.Auth.RefreshToken)
+}
+```
+
+### Handler Methods
+```go
+// Health check handler
+func (s *Server) healthCheck(c echo.Context) error {
+    return c.JSON(http.StatusOK, map[string]string{
+        "status": "ok",
+        "time":   time.Now().Format(time.RFC3339),
+    })
+}
+```
+
+## Error Handling
+
+### Custom Error Handler
+```go
+func (s *Server) setupErrorHandler() {
+    s.echo.HTTPErrorHandler = func(err error, c echo.Context) {
+        var httpErr *echo.HTTPError
+        if errors.As(err, &httpErr) {
+            // Echo HTTP errors
+            c.JSON(httpErr.Code, map[string]interface{}{
+                "error":   httpErr.Message,
+                "code":    httpErr.Code,
+                "details": httpErr.Internal,
+            })
+            return
+        }
+        
+        // Domain errors
+        if domainErr, ok := err.(*domain.Error); ok {
+            c.JSON(http.StatusBadRequest, map[string]interface{}{
+                "error": domainErr.Error(),
+                "code":  "DOMAIN_ERROR",
+            })
+            return
+        }
+        
+        // Internal server errors
+        c.JSON(http.StatusInternalServerError, map[string]interface{}{
+            "error": "internal server error",
+            "code":  "INTERNAL_ERROR",
+        })
+    }
+}
+```
+
+## Server Lifecycle
+
+### Start Server
+```go
+func (s *Server) Start() error {
+    s.setupMiddleware()
+    s.setupErrorHandler()
+    s.setupRoutes()
+    
+    s.echo.Logger.Infof("Starting server on port %s", s.config.Port)
+    return s.echo.Start(":" + s.config.Port)
+}
+```
+
+### Graceful Shutdown
+```go
+func (s *Server) Shutdown(ctx context.Context) error {
+    s.echo.Logger.Info("Shutting down server...")
+    return s.echo.Shutdown(ctx)
+}
+```
+
+## Configuration Management
+
+### Environment-based Config
+```go
+func NewConfig() *Config {
+    port := os.Getenv("SERVER_PORT")
+    if port == "" {
+        port = "8080"
+    }
+    
+    readTimeout, _ := time.ParseDuration(os.Getenv("SERVER_READ_TIMEOUT"))
+    if readTimeout == 0 {
+        readTimeout = 30 * time.Second
+    }
+    
+    writeTimeout, _ := time.ParseDuration(os.Getenv("SERVER_WRITE_TIMEOUT"))
+    if writeTimeout == 0 {
+        writeTimeout = 30 * time.Second
+    }
+    
+    idleTimeout, _ := time.ParseDuration(os.Getenv("SERVER_IDLE_TIMEOUT"))
+    if idleTimeout == 0 {
+        idleTimeout = 60 * time.Second
+    }
+    
+    return &Config{
+        Port:         port,
+        ReadTimeout:  readTimeout,
+        WriteTimeout: writeTimeout,
+        IdleTimeout:  idleTimeout,
+    }
+}
+```
+
+## Integration with DI
+
+### Provider Function
+```go
+// In internal/di/providers.go
+func ProvideHTTPServer(
+    handlers *handler.Handlers,
+    config *Config,
+) *Server {
+    return NewServer(handlers, config)
+}
+
+func ProvideServerConfig() *Config {
+    return NewConfig()
+}
+```
+
+### Wire Set
+```go
+// In internal/di/wire.go
+var ServerSet = wire.NewSet(
+    HandlerSet,
+    ProvideServerConfig,
+    ProvideHTTPServer,
+)
+
+func InitializeServer() *Server {
+    panic(wire.Build(ServerSet))
+}
+```
+
+## Testing
+
+### Server Test
+```go
+func TestServer_HealthCheck(t *testing.T) {
+    // Create test server
+    server := NewServer(nil, &Config{Port: "8080"})
+    
+    // Create test request
+    req := httptest.NewRequest(http.MethodGet, "/health", nil)
+    rec := httptest.NewRecorder()
+    c := server.echo.NewContext(req, rec)
+    
+    // Test health check
+    err := server.healthCheck(c)
+    assert.NoError(t, err)
+    assert.Equal(t, http.StatusOK, rec.Code)
+    
+    var response map[string]string
+    err = json.Unmarshal(rec.Body.Bytes(), &response)
+    assert.NoError(t, err)
+    assert.Equal(t, "ok", response["status"])
+}
+```
+
+## Principles
+
+1. **Separation of Concerns**: Server handles HTTP concerns, delegates business logic to handlers
+2. **Configuration**: Environment-based configuration with sensible defaults
+3. **Middleware**: Global middleware for cross-cutting concerns
+4. **Error Handling**: Centralized error handling with proper HTTP status codes
+5. **Graceful Shutdown**: Proper server shutdown with context timeout
+6. **Testing**: Easy to test with httptest package
+7. **DI Integration**: Seamless integration with Wire dependency injection
+
+## Commands
+
+### Install Echo
+```bash
+go get github.com/labstack/echo/v4
+```
+
+### Run Server
+```bash
+go run cmd/main.go
+```
+
+### Test Server
+```bash
+go test ./internal/presentation/http -v
+```
+
+Note: Echo provides excellent performance, built-in middleware, and follows Go conventions while maintaining simplicity and extensibility.
