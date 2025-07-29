@@ -41,6 +41,7 @@ import (
 	"time"
 
 	"github.com/harungurubudi/mtsg/internal/di"
+	_ "github.com/harungurubudi/mtsg/internal/presentation/http/docs" // Import generated docs
 )
 
 func main() {

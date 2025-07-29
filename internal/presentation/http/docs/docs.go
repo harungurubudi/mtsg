@@ -105,6 +105,8 @@ var SwaggerInfo = &swag.Spec{
 	Description:      "Multi-Tenant SaaS Gateway API",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
+	LeftDelim:        "{{",
+	RightDelim:       "}}",
 }
 
 func init() {

@@ -72,6 +72,9 @@ func (s *Server) setupMiddleware() {
 func (s *Server) setupRoutes() {
 	// Swagger documentation routes
 	s.echo.GET("/swagger/*", echoSwagger.WrapHandler)
+	s.echo.GET("/docs", func(c echo.Context) error {
+		return c.Redirect(http.StatusMovedPermanently, "/swagger/index.html")
+	})
 
 	// Ping endpoint
 	s.echo.GET("/ping", s.handlers.Ping.Ping)
