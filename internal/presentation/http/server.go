@@ -10,6 +10,7 @@ import (
 	"github.com/harungurubudi/mtsg/internal/presentation/http/handler"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+	echoSwagger "github.com/swaggo/echo-swagger"
 )
 
 // Server represents the HTTP server
@@ -69,6 +70,9 @@ func (s *Server) setupMiddleware() {
 
 // setupRoutes configures all routes
 func (s *Server) setupRoutes() {
+	// Swagger documentation routes
+	s.echo.GET("/swagger/*", echoSwagger.WrapHandler)
+
 	// Ping endpoint
 	s.echo.GET("/ping", s.handlers.Ping.Ping)
 

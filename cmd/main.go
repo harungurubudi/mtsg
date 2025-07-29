@@ -1,3 +1,34 @@
+// @title MTSG API
+// @version 1.0
+// @description Multi-Tenant SaaS Gateway API
+// @termsOfService http://swagger.io/terms/
+
+// @contact.name API Support
+// @contact.url http://www.swagger.io/support
+// @contact.email support@swagger.io
+
+// @license.name Apache 2.0
+// @license.url http://www.apache.org/licenses/LICENSE-2.0.html
+
+// @host localhost:8080
+// @BasePath /
+
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
+// @description Type "Bearer" followed by a space and JWT token.
+
+// @tag.name Health
+// @tag.description Health check operations
+
+// @tag.name Authentication
+// @tag.description Authentication operations
+
+// @tag.name Users
+// @tag.description User management operations
+
+// @tag.name Tenants
+// @tag.description Tenant management operations
 package main
 
 import (

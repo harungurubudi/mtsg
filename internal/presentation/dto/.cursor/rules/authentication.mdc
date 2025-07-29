@@ -1,6 +1,6 @@
 # Authentication
 
-## LoginRequest
+## LoginRequest 
 
 LoginRequest consists of:
 - **email**: string, validated as email format

@@ -52,3 +52,4 @@ internal/presentation/
 4. **Error Scenarios**: Test all error mapping scenarios
 
 Note: This presentation layer follows clean architecture principles by keeping HTTP concerns separate from business logic. For specific implementation details, see subdirectory rules.
+ 
