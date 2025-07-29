@@ -5,6 +5,7 @@ go 1.24.3
 require (
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/google/uuid v1.6.0
+	github.com/google/wire v0.6.0
 	github.com/stretchr/testify v1.10.0
 	golang.org/x/crypto v0.40.0
 )
