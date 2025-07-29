@@ -1,0 +1,229 @@
+# DTO (Data Transfer Object) Rule
+
+## Overview
+DTOs are used to transfer data between the presentation layer and external clients. They handle the transformation between external formats (JSON) and internal domain models, ensuring clean separation between API contracts and internal business logic.
+
+## Directory Structure
+```
+internal/presentation/dto/
+├── auth.go        # Authentication DTOs (login, register, etc.)
+├── user.go        # User-related DTOs (profile, update, etc.)
+├── tenant.go      # Tenant-related DTOs
+└── common.go      # Common DTOs and utilities
+```
+
+## DTO Types
+
+### Request DTOs
+- **Purpose**: Validate and transform incoming HTTP requests
+- **Validation**: Use struct tags for input validation
+- **Transformation**: Convert to domain models via `ToDomain()` methods
+
+### Response DTOs
+- **Purpose**: Format domain data for external consumption
+- **Serialization**: Handle JSON marshaling with proper field visibility
+- **Construction**: Use factory functions to create from domain models
+
+## Request DTO Pattern
+
+```go
+type LoginRequest struct {
+    Email    string `json:"email" validate:"required,email"`
+    Password string `json:"password" validate:"required,min=8"`
+}
+
+func (r *LoginRequest) ToDomain() domain.LoginInput {
+    return domain.LoginInput{
+        Email:    domain.Email(r.Email),
+        Password: r.Password,
+    }
+}
+```
+
+## Response DTO Pattern
+
+```go
+type LoginResponse struct {
+    Token string       `json:"token"`
+    User  UserResponse `json:"user"`
+}
+
+func NewLoginResponse(result *usecase.LoginResult) *LoginResponse {
+    return &LoginResponse{
+        Token: result.Token,
+        User:  NewUserResponse(result.User),
+    }
+}
+```
+
+## Validation Rules
+
+### Common Validation Tags
+- `required` - Field is mandatory
+- `email` - Valid email format
+- `min=X` - Minimum length/value
+- `max=X` - Maximum length/value
+- `oneof=val1 val2` - Must be one of specified values
+- `uuid` - Valid UUID format
+- `datetime` - Valid datetime format
+
+### Custom Validation
+```go
+type CreateUserRequest struct {
+    Email     string `json:"email" validate:"required,email"`
+    Name      string `json:"name" validate:"required,min=2,max=100"`
+    Password  string `json:"password" validate:"required,min=8"`
+    Role      string `json:"role" validate:"required,oneof=admin member"`
+    TenantID  string `json:"tenant_id" validate:"required,uuid"`
+}
+```
+
+## Field Visibility
+
+### JSON Tags
+- Use `json` tags for all fields
+- Use `json:"-"` to exclude fields from serialization
+- Use `json:",omitempty"` to omit empty fields
+
+### Example
+```go
+type UserResponse struct {
+    ID        string    `json:"id"`
+    Email     string    `json:"email"`
+    Name      string    `json:"name"`
+    Role      string    `json:"role"`
+    Status    string    `json:"status"`
+    CreatedAt time.Time `json:"created_at"`
+    UpdatedAt time.Time `json:"updated_at"`
+    // Exclude sensitive fields
+    Password  string `json:"-"`
+}
+```
+
+## Nested DTOs
+
+### Composition Pattern
+```go
+type UserResponse struct {
+    ID        string         `json:"id"`
+    Email     string         `json:"email"`
+    Name      string         `json:"name"`
+    Role      string         `json:"role"`
+    Status    string         `json:"status"`
+    Tenant    TenantResponse `json:"tenant"`
+    CreatedAt time.Time      `json:"created_at"`
+    UpdatedAt time.Time      `json:"updated_at"`
+}
+
+type TenantResponse struct {
+    ID   string `json:"id"`
+    Name string `json:"name"`
+}
+```
+
+## Error Response DTOs
+
+### Standard Error Format
+```go
+type ErrorResponse struct {
+    Status string `json:"status"`
+    Error  Error  `json:"error"`
+}
+
+type Error struct {
+    Code       string `json:"code"`
+    Message    string `json:"message"`
+    StatusCode int    `json:"status_code"`
+}
+
+func NewErrorResponse(httpError *error.HTTPError) *ErrorResponse {
+    return &ErrorResponse{
+        Status: "error",
+        Error: Error{
+            Code:       httpError.GetCode(),
+            Message:    httpError.Error(),
+            StatusCode: httpError.GetStatusCode(),
+        },
+    }
+}
+```
+
+## Success Response DTOs
+
+### Standard Success Format
+```go
+type SuccessResponse struct {
+    Status string      `json:"status"`
+    Data   interface{} `json:"data"`
+}
+
+func NewSuccessResponse(data interface{}) *SuccessResponse {
+    return &SuccessResponse{
+        Status: "success",
+        Data:   data,
+    }
+}
+```
+
+## List Response DTOs
+
+### Pagination Support
+```go
+type ListResponse struct {
+    Status string      `json:"status"`
+    Data   interface{} `json:"data"`
+    Meta   Meta        `json:"meta"`
+}
+
+type Meta struct {
+    Page       int `json:"page"`
+    PerPage    int `json:"per_page"`
+    Total      int `json:"total"`
+    TotalPages int `json:"total_pages"`
+}
+
+func NewListResponse(data interface{}, page, perPage, total int) *ListResponse {
+    totalPages := (total + perPage - 1) / perPage
+    return &ListResponse{
+        Status: "success",
+        Data:   data,
+        Meta: Meta{
+            Page:       page,
+            PerPage:    perPage,
+            Total:      total,
+            TotalPages: totalPages,
+        },
+    }
+}
+```
+
+## Principles
+
+1. **Single Responsibility**: Each DTO has one clear purpose
+2. **Immutable**: DTOs should not be modified after creation
+3. **Validation**: All request DTOs should have validation rules
+4. **Transformation**: Use methods to convert between DTOs and domain models
+5. **Consistency**: Follow consistent naming and structure patterns
+6. **Security**: Exclude sensitive data from response DTOs
+7. **Documentation**: Use clear field names and comments
+
+## Naming Conventions
+
+- **Request DTOs**: `{Action}{Entity}Request` (e.g., `LoginRequest`, `CreateUserRequest`)
+- **Response DTOs**: `{Action}{Entity}Response` (e.g., `LoginResponse`, `UserResponse`)
+- **List DTOs**: `{Entity}ListResponse` (e.g., `UserListResponse`)
+- **Error DTOs**: `ErrorResponse`, `ValidationErrorResponse`
+
+## Testing Guidelines
+
+1. **Validation Tests**: Test all validation rules for request DTOs
+2. **Transformation Tests**: Test `ToDomain()` methods
+3. **Serialization Tests**: Test JSON marshaling/unmarshaling
+4. **Factory Tests**: Test response DTO factory functions
+5. **Edge Cases**: Test with empty, null, and boundary values
+
+Note: DTOs ensure clean API contracts and proper data transformation between external clients and internal domain models.
+description:
+globs:
+alwaysApply: false
+---
