@@ -2,6 +2,8 @@ package di
 
 import (
 	redisclient "github.com/go-redis/redis/v8"
+	"github.com/harungurubudi/mtsg/internal/presentation/http"
+	"github.com/harungurubudi/mtsg/internal/presentation/http/handler"
 	"github.com/harungurubudi/mtsg/internal/repository"
 	"github.com/harungurubudi/mtsg/internal/usecase"
 	"github.com/harungurubudi/mtsg/pkg/redis"
@@ -44,4 +46,26 @@ func ProvideAuthUseCase(
 	tokenGen token.GeneratorRepository,
 ) usecase.Authentication {
 	return usecase.NewAuthentication(userRepo, tokenGen)
+}
+
+// Handler Providers
+
+// ProvideHandlers provides HTTP handlers
+func ProvideHandlers() *handler.Handlers {
+	return handler.NewHandlers()
+}
+
+// Server Providers
+
+// ProvideServerConfig provides server configuration
+func ProvideServerConfig() *http.Config {
+	return http.NewConfig()
+}
+
+// ProvideHTTPServer provides HTTP server instance
+func ProvideHTTPServer(
+	handlers *handler.Handlers,
+	config *http.Config,
+) *http.Server {
+	return http.NewServer(handlers, config)
 }

@@ -8,6 +8,7 @@ package di
 
 import (
 	"github.com/google/wire"
+	"github.com/harungurubudi/mtsg/internal/presentation/http"
 	"github.com/harungurubudi/mtsg/internal/usecase"
 )
 
@@ -23,6 +24,14 @@ func InitializeAuthUseCase() usecase.Authentication {
 	return authentication
 }
 
+//go:generate wire
+func InitializeServer() *http.Server {
+	handlers := ProvideHandlers()
+	config := ProvideServerConfig()
+	server := ProvideHTTPServer(handlers, config)
+	return server
+}
+
 // wire.go:
 
 // HandlerSet groups all handler-related providers
@@ -35,4 +44,13 @@ var HandlerSet = wire.NewSet(
 	ProvideTokenGenerator,
 
 	ProvideAuthUseCase,
+
+	ProvideHandlers,
+)
+
+// ServerSet groups all server-related providers
+var ServerSet = wire.NewSet(
+	HandlerSet,
+	ProvideServerConfig,
+	ProvideHTTPServer,
 )
