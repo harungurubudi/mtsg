@@ -9,8 +9,14 @@ import (
 	"github.com/harungurubudi/mtsg/internal/usecase"
 )
 
+// ConfigSet groups all configuration-related providers
+var ConfigSet = wire.NewSet(
+	ProvideConfig,
+)
+
 // HandlerSet groups all handler-related providers
 var HandlerSet = wire.NewSet(
+	ConfigSet,
 	// Configuration
 	ProvideRedisClient,
 	ProvideRedisAdapter,

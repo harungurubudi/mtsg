@@ -17,7 +17,8 @@ import (
 //go:generate wire
 func InitializeAuthUseCase() usecase.Authentication {
 	userRepository := ProvideUserRepository()
-	client := ProvideRedisClient()
+	config := ProvideConfig()
+	client := ProvideRedisClient(config)
 	adapterRepository := ProvideRedisAdapter(client)
 	generatorRepository := ProvideTokenGenerator(adapterRepository)
 	authentication := ProvideAuthUseCase(userRepository, generatorRepository)
@@ -27,15 +28,22 @@ func InitializeAuthUseCase() usecase.Authentication {
 //go:generate wire
 func InitializeServer() *http.Server {
 	handlers := ProvideHandlers()
-	config := ProvideServerConfig()
-	server := ProvideHTTPServer(handlers, config)
+	config := ProvideConfig()
+	httpConfig := ProvideServerConfig(config)
+	server := ProvideHTTPServer(handlers, httpConfig)
 	return server
 }
 
 // wire.go:
 
+// ConfigSet groups all configuration-related providers
+var ConfigSet = wire.NewSet(
+	ProvideConfig,
+)
+
 // HandlerSet groups all handler-related providers
 var HandlerSet = wire.NewSet(
+	ConfigSet,
 
 	ProvideRedisClient,
 	ProvideRedisAdapter,

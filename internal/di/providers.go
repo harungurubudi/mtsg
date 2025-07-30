@@ -1,23 +1,36 @@
 package di
 
 import (
+	"fmt"
+
 	redisclient "github.com/go-redis/redis/v8"
 	"github.com/harungurubudi/mtsg/internal/presentation/http"
 	"github.com/harungurubudi/mtsg/internal/presentation/http/handler"
 	"github.com/harungurubudi/mtsg/internal/repository"
 	"github.com/harungurubudi/mtsg/internal/usecase"
+	"github.com/harungurubudi/mtsg/pkg/config"
 	"github.com/harungurubudi/mtsg/pkg/redis"
 	"github.com/harungurubudi/mtsg/pkg/token"
 )
 
 // Configuration Providers
 
+// ProvideConfig provides application configuration
+func ProvideConfig() *config.Config {
+	cfg, err := config.Load()
+	if err != nil {
+		panic(fmt.Sprintf("failed to load configuration: %v", err))
+	}
+	return cfg
+}
+
 // ProvideRedisClient provides a Redis client instance
-func ProvideRedisClient() *redisclient.Client {
+func ProvideRedisClient(cfg *config.Config) *redisclient.Client {
 	return redisclient.NewClient(&redisclient.Options{
-		Addr:     "localhost:6379", // Default Redis address
-		Password: "",               // No password by default
-		DB:       0,                // Default database
+		Addr:     fmt.Sprintf("%s:%d", cfg.Redis.Host, cfg.Redis.Port),
+		Password: cfg.Redis.Password,
+		DB:       cfg.Redis.DB,
+		PoolSize: cfg.Redis.PoolSize,
 	})
 }
 
@@ -58,8 +71,13 @@ func ProvideHandlers() *handler.Handlers {
 // Server Providers
 
 // ProvideServerConfig provides server configuration
-func ProvideServerConfig() *http.Config {
-	return http.NewConfig()
+func ProvideServerConfig(cfg *config.Config) *http.Config {
+	return &http.Config{
+		Port:         cfg.Server.Port,
+		ReadTimeout:  cfg.Server.ReadTimeout,
+		WriteTimeout: cfg.Server.WriteTimeout,
+		IdleTimeout:  cfg.Server.IdleTimeout,
+	}
 }
 
 // ProvideHTTPServer provides HTTP server instance
