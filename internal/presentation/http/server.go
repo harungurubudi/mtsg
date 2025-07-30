@@ -9,7 +9,7 @@ import (
 
 	"github.com/harungurubudi/mtsg/internal/presentation/http/handler"
 	"github.com/labstack/echo/v4"
-	"github.com/labstack/echo/v4/middleware"
+	echoMiddleware "github.com/labstack/echo/v4/middleware"
 	echoSwagger "github.com/swaggo/echo-swagger"
 )
 
@@ -50,22 +50,17 @@ func NewServer(handlers *handler.Handlers, config *Config) *Server {
 
 // setupMiddleware configures global middleware
 func (s *Server) setupMiddleware() {
-	// Recovery middleware for panic handling
-	s.echo.Use(middleware.Recover())
-
-	// Logger middleware for request logging
-	s.echo.Use(middleware.Logger())
-
-	// CORS middleware for cross-origin requests
-	s.echo.Use(middleware.CORSWithConfig(middleware.CORSConfig{
+	// TODO: Create middleware factory with proper dependencies
+	// For now, use basic Echo middleware
+	s.echo.Use(echoMiddleware.Recover())
+	s.echo.Use(echoMiddleware.Logger())
+	s.echo.Use(echoMiddleware.CORSWithConfig(echoMiddleware.CORSConfig{
 		AllowOrigins: []string{"*"},
 		AllowMethods: []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete},
 		AllowHeaders: []string{echo.HeaderOrigin, echo.HeaderContentType, echo.HeaderAccept, echo.HeaderAuthorization},
 	}))
-
-	// Custom middleware
-	s.echo.Use(middleware.RequestID())
-	s.echo.Use(middleware.Gzip())
+	s.echo.Use(echoMiddleware.RequestID())
+	s.echo.Use(echoMiddleware.Gzip())
 }
 
 // setupRoutes configures all routes
