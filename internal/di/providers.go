@@ -70,20 +70,10 @@ func ProvideHandlers() *handler.Handlers {
 
 // Server Providers
 
-// ProvideServerConfig provides server configuration
-func ProvideServerConfig(cfg *config.Config) *http.Config {
-	return &http.Config{
-		Port:         cfg.Server.Port,
-		ReadTimeout:  cfg.Server.ReadTimeout,
-		WriteTimeout: cfg.Server.WriteTimeout,
-		IdleTimeout:  cfg.Server.IdleTimeout,
-	}
-}
-
 // ProvideHTTPServer provides HTTP server instance
 func ProvideHTTPServer(
 	handlers *handler.Handlers,
-	config *http.Config,
+	config *config.Config,
 ) *http.Server {
 	return http.NewServer(handlers, config)
 }

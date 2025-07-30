@@ -6,12 +6,13 @@ import (
 	"testing"
 
 	"github.com/harungurubudi/mtsg/internal/presentation/http/handler"
+	"github.com/harungurubudi/mtsg/pkg/config"
 )
 
 func TestSwaggerEndpoints(t *testing.T) {
 	// Create test server
 	handlers := handler.NewHandlers()
-	config := &Config{Port: "8080"}
+	config := &config.Config{Server: config.ServerConfig{Port: "8080"}}
 	server := NewServer(handlers, config)
 
 	// Setup routes

@@ -1,0 +1,373 @@
+# Error Handler Management Rule
+
+## Overview
+This rule defines the error handling approach for the Echo HTTP server, including organization, implementation patterns, and integration with the existing error packages.
+
+## Location and Organization
+
+### Directory Structure
+All error handling components must be placed in the `internal/presentation/http/errorhandler/` directory:
+
+```
+internal/presentation/http/errorhandler/
+├── errorhandler.go          # Main error handler implementation
+├── errorhandler_test.go     # Error handler tests
+├── config.go                # Error handler configuration
+└── .cursor/rules/           # Error handler rules
+```
+
+### File Naming Convention
+- Use descriptive, lowercase names: `errorhandler.go`, `config.go`
+- Group related functionality in single files when appropriate
+- Create separate files for complex error handling implementations
+
+## Error Handler Implementation Patterns
+
+### 1. Basic Error Handler Structure
+```go
+package errorhandler
+
+import (
+    "github.com/labstack/echo/v4"
+    pkgerror "github.com/harungurubudi/mtsg/pkg/error"
+)
+
+// ErrorHandler provides centralized error handling
+type ErrorHandler struct {
+    config *Config
+}
+
+// NewErrorHandler creates a new error handler instance
+func NewErrorHandler(config *Config) *ErrorHandler {
+    return &ErrorHandler{
+        config: config,
+    }
+}
+
+// HandleError processes errors and returns appropriate HTTP responses
+func (h *ErrorHandler) HandleError(err error, c echo.Context) {
+    // Error handling logic here
+}
+```
+
+### 2. Configuration-Based Error Handler
+```go
+// Config holds error handler configuration
+type Config struct {
+    Environment string `json:"environment"`
+    ShowDetails bool   `json:"show_details"`
+    LogErrors   bool   `json:"log_errors"`
+}
+
+// DefaultConfig returns default error handler configuration
+func DefaultConfig() *Config {
+    return &Config{
+        Environment: "development",
+        ShowDetails: true,
+        LogErrors:   true,
+    }
+}
+```
+
+## Error Types and Handling
+
+### 1. HTTPError Handling (pkg/error.HTTPError)
+```go
+// handleHTTPError processes HTTPError from pkg/error
+func (h *ErrorHandler) handleHTTPError(err *pkgerror.HTTPError, c echo.Context) {
+    response := map[string]interface{}{
+        "status": "error",
+        "error": map[string]interface{}{
+            "code":    err.GetCode(),
+            "message": err.Error(),
+            "status_code": err.GetStatusCode(),
+        },
+    }
+    
+    c.JSON(err.GetStatusCode(), response)
+}
+```
+
+### 2. StackError Handling (pkg/error.StackError)
+```go
+// handleStackError processes StackError from pkg/error
+func (h *ErrorHandler) handleStackError(err *pkgerror.StackError, c echo.Context) {
+    response := map[string]interface{}{
+        "status": "error",
+        "error": map[string]interface{}{
+            "code":    "internal_server_error",
+            "message": "An internal error occurred",
+            "status_code": http.StatusInternalServerError,
+        },
+    }
+    
+    // Add stack trace in development
+    if h.config.Environment == "development" && h.config.ShowDetails {
+        response["error"].(map[string]interface{})["stack_trace"] = err.StackTrace()
+    }
+    
+    c.JSON(http.StatusInternalServerError, response)
+}
+```
+
+### 3. Echo HTTPError Handling
+```go
+// handleEchoHTTPError processes Echo's HTTPError
+func (h *ErrorHandler) handleEchoHTTPError(err *echo.HTTPError, c echo.Context) {
+    response := map[string]interface{}{
+        "status": "error",
+        "error": map[string]interface{}{
+            "code":       "echo_error",
+            "message":    err.Message,
+            "status_code": err.Code,
+        },
+    }
+    
+    // Add internal details in development
+    if h.config.Environment == "development" && h.config.ShowDetails {
+        response["error"].(map[string]interface{})["internal"] = err.Internal
+    }
+    
+    c.JSON(err.Code, response)
+}
+```
+
+### 4. Generic Error Handling
+```go
+// handleGenericError processes generic errors
+func (h *ErrorHandler) handleGenericError(err error, c echo.Context) {
+    response := map[string]interface{}{
+        "status": "error",
+        "error": map[string]interface{}{
+            "code":       "internal_server_error",
+            "message":    "An internal error occurred",
+            "status_code": http.StatusInternalServerError,
+        },
+    }
+    
+    // Add error details in development
+    if h.config.Environment == "development" && h.config.ShowDetails {
+        response["error"].(map[string]interface{})["details"] = err.Error()
+    }
+    
+    c.JSON(http.StatusInternalServerError, response)
+}
+```
+
+## Main Error Handler Implementation
+
+### Centralized Error Processing
+```go
+// HandleError processes all types of errors and returns appropriate responses
+func (h *ErrorHandler) HandleError(err error, c echo.Context) {
+    // Log error if enabled
+    if h.config.LogErrors {
+        h.logError(err, c)
+    }
+    
+    // Handle different error types
+    switch e := err.(type) {
+    case *pkgerror.HTTPError:
+        h.handleHTTPError(e, c)
+    case *pkgerror.StackError:
+        h.handleStackError(e, c)
+    case *echo.HTTPError:
+        h.handleEchoHTTPError(e, c)
+    default:
+        h.handleGenericError(err, c)
+    }
+}
+```
+
+### Error Logging
+```go
+// logError logs error details for debugging
+func (h *ErrorHandler) logError(err error, c echo.Context) {
+    logger := c.Logger()
+    
+    logData := map[string]interface{}{
+        "error":     err.Error(),
+        "method":    c.Request().Method,
+        "uri":       c.Request().RequestURI,
+        "remote_ip": c.RealIP(),
+        "user_agent": c.Request().UserAgent(),
+    }
+    
+    // Add stack trace for stack errors
+    if stackErr, ok := err.(*pkgerror.StackError); ok {
+        logData["stack_trace"] = stackErr.StackTrace()
+    }
+    
+    logger.Error(logData)
+}
+```
+
+## Error Handler Factory
+
+### Factory Pattern for Error Handler
+```go
+// ErrorHandlerFactory provides factory functions for error handlers
+type ErrorHandlerFactory struct {
+    config *config.Config
+}
+
+// NewErrorHandlerFactory creates a new error handler factory
+func NewErrorHandlerFactory(config *config.Config) *ErrorHandlerFactory {
+    return &ErrorHandlerFactory{
+        config: config,
+    }
+}
+
+// CreateErrorHandler creates an error handler with configuration
+func (f *ErrorHandlerFactory) CreateErrorHandler() *ErrorHandler {
+    errorConfig := &Config{
+        Environment: f.config.Server.Environment,
+        ShowDetails: f.config.Server.Environment == "development",
+        LogErrors:   true,
+    }
+    
+    return NewErrorHandler(errorConfig)
+}
+```
+
+## Server Integration
+
+### Echo HTTPErrorHandler Integration
+```go
+// SetupErrorHandler configures Echo's HTTPErrorHandler
+func (s *Server) setupErrorHandler() {
+    factory := errorhandler.NewErrorHandlerFactory(s.config)
+    errorHandler := factory.CreateErrorHandler()
+    
+    s.echo.HTTPErrorHandler = errorHandler.HandleError
+}
+```
+
+### Middleware Integration
+```go
+// ErrorHandlingMiddleware provides error handling for middleware
+func ErrorHandlingMiddleware(errorHandler *ErrorHandler) echo.MiddlewareFunc {
+    return func(next echo.HandlerFunc) echo.HandlerFunc {
+        return func(c echo.Context) error {
+            if err := next(c); err != nil {
+                errorHandler.HandleError(err, c)
+                return nil // Error already handled
+            }
+            return nil
+        }
+    }
+}
+```
+
+## Testing
+
+### Test Structure
+```go
+func TestErrorHandler(t *testing.T) {
+    tests := []struct {
+        name           string
+        error         error
+        expectedCode  int
+        expectedBody  map[string]interface{}
+    }{
+        {
+            name: "HTTPError handling",
+            error: pkgerror.NewUnauthorizedError("unauthorized"),
+            expectedCode: http.StatusUnauthorized,
+            expectedBody: map[string]interface{}{
+                "status": "error",
+                "error": map[string]interface{}{
+                    "code": "unauthorized",
+                    "message": "unauthorized",
+                    "status_code": http.StatusUnauthorized,
+                },
+            },
+        },
+        // Add more test cases
+    }
+    
+    for _, tt := range tests {
+        t.Run(tt.name, func(t *testing.T) {
+            // Test implementation
+        })
+    }
+}
+```
+
+## Best Practices
+
+### 1. Error Response Format
+- Always use consistent error response format
+- Include error code, message, and status code
+- Add stack traces only in development
+- Never expose sensitive information in production
+
+### 2. Error Logging
+- Log all errors with context (request details)
+- Include stack traces for debugging
+- Use structured logging
+- Don't log sensitive information
+
+### 3. Security
+- Sanitize error messages in production
+- Don't expose internal error details
+- Use appropriate HTTP status codes
+- Handle errors gracefully
+
+### 4. Performance
+- Keep error handling lightweight
+- Avoid expensive operations in error handlers
+- Use efficient logging
+- Cache error responses when appropriate
+
+## Environment-Specific Behavior
+
+### Development Environment
+- Show detailed error messages
+- Include stack traces
+- Log all errors with full context
+- Enable debugging information
+
+### Production Environment
+- Show generic error messages
+- Hide stack traces
+- Log errors without sensitive data
+- Disable debugging information
+
+## Dependencies
+
+### Required Dependencies
+```go
+import (
+    "net/http"
+    "github.com/labstack/echo/v4"
+    pkgerror "github.com/harungurubudi/mtsg/pkg/error"
+    "github.com/harungurubudi/mtsg/pkg/config"
+)
+```
+
+## Migration from Current Setup
+
+When migrating from the current simple error handling:
+
+1. Create the errorhandler directory structure
+2. Move existing error handling logic to the new structure
+3. Implement the error handler factory pattern
+4. Update server setup to use the new error handler
+5. Add comprehensive tests
+6. Update documentation
+
+## Future Extensions
+
+The error handler system is designed to be easily extensible:
+
+1. **Custom Error Types**: Add support for domain-specific errors
+2. **Error Metrics**: Collect error metrics for monitoring
+3. **Error Reporting**: Integrate with error reporting services
+4. **Error Caching**: Cache common error responses
+5. **Error Localization**: Support for localized error messages
+6. **Error Correlation**: Add correlation IDs for error tracking
+description:
+globs:
+alwaysApply: false
+---

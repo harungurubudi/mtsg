@@ -2,12 +2,12 @@ package http
 
 import (
 	"context"
-	"errors"
 	"net/http"
-	"os"
 	"time"
 
+	"github.com/harungurubudi/mtsg/internal/presentation/http/errorhandler"
 	"github.com/harungurubudi/mtsg/internal/presentation/http/handler"
+	"github.com/harungurubudi/mtsg/pkg/config"
 	"github.com/labstack/echo/v4"
 	echoMiddleware "github.com/labstack/echo/v4/middleware"
 	echoSwagger "github.com/swaggo/echo-swagger"
@@ -17,19 +17,11 @@ import (
 type Server struct {
 	echo     *echo.Echo
 	handlers *handler.Handlers
-	config   *Config
-}
-
-// Config represents server configuration
-type Config struct {
-	Port         string
-	ReadTimeout  time.Duration
-	WriteTimeout time.Duration
-	IdleTimeout  time.Duration
+	config   *config.Config
 }
 
 // NewServer creates a new HTTP server instance
-func NewServer(handlers *handler.Handlers, config *Config) *Server {
+func NewServer(handlers *handler.Handlers, config *config.Config) *Server {
 	e := echo.New()
 
 	// Configure Echo
@@ -37,9 +29,9 @@ func NewServer(handlers *handler.Handlers, config *Config) *Server {
 	e.HidePort = true
 
 	// Set timeouts
-	e.Server.ReadTimeout = config.ReadTimeout
-	e.Server.WriteTimeout = config.WriteTimeout
-	e.Server.IdleTimeout = config.IdleTimeout
+	e.Server.ReadTimeout = config.Server.ReadTimeout
+	e.Server.WriteTimeout = config.Server.WriteTimeout
+	e.Server.IdleTimeout = config.Server.IdleTimeout
 
 	return &Server{
 		echo:     e,
@@ -102,24 +94,10 @@ func (s *Server) healthCheck(c echo.Context) error {
 
 // setupErrorHandler configures custom error handling
 func (s *Server) setupErrorHandler() {
-	s.echo.HTTPErrorHandler = func(err error, c echo.Context) {
-		var httpErr *echo.HTTPError
-		if errors.As(err, &httpErr) {
-			// Echo HTTP errors
-			c.JSON(httpErr.Code, map[string]interface{}{
-				"error":   httpErr.Message,
-				"code":    httpErr.Code,
-				"details": httpErr.Internal,
-			})
-			return
-		}
+	factory := errorhandler.NewErrorHandlerFactory(s.config)
+	errorHandler := factory.CreateErrorHandler()
 
-		// Internal server errors
-		c.JSON(http.StatusInternalServerError, map[string]interface{}{
-			"error": "internal server error",
-			"code":  "INTERNAL_ERROR",
-		})
-	}
+	s.echo.HTTPErrorHandler = errorHandler.HandleError
 }
 
 // Start starts the HTTP server
@@ -128,8 +106,8 @@ func (s *Server) Start() error {
 	s.setupErrorHandler()
 	s.setupRoutes()
 
-	s.echo.Logger.Infof("Starting server on port %s", s.config.Port)
-	return s.echo.Start(":" + s.config.Port)
+	s.echo.Logger.Infof("Starting server on port %s", s.config.Server.Port)
+	return s.echo.Start(":" + s.config.Server.Port)
 }
 
 // Shutdown gracefully shuts down the server
@@ -139,31 +117,13 @@ func (s *Server) Shutdown(ctx context.Context) error {
 }
 
 // NewConfig creates a new server configuration from environment variables
-func NewConfig() *Config {
-	port := os.Getenv("SERVER_PORT")
-	if port == "" {
-		port = "8080"
+// This function is deprecated and should be replaced with pkg/config.Load()
+func NewConfig() *config.Config {
+	// This is a temporary function for backward compatibility
+	// In the future, use pkg/config.Load() directly
+	cfg, err := config.Load()
+	if err != nil {
+		panic(err)
 	}
-
-	readTimeout, _ := time.ParseDuration(os.Getenv("SERVER_READ_TIMEOUT"))
-	if readTimeout == 0 {
-		readTimeout = 30 * time.Second
-	}
-
-	writeTimeout, _ := time.ParseDuration(os.Getenv("SERVER_WRITE_TIMEOUT"))
-	if writeTimeout == 0 {
-		writeTimeout = 30 * time.Second
-	}
-
-	idleTimeout, _ := time.ParseDuration(os.Getenv("SERVER_IDLE_TIMEOUT"))
-	if idleTimeout == 0 {
-		idleTimeout = 60 * time.Second
-	}
-
-	return &Config{
-		Port:         port,
-		ReadTimeout:  readTimeout,
-		WriteTimeout: writeTimeout,
-		IdleTimeout:  idleTimeout,
-	}
+	return cfg
 }

@@ -29,8 +29,7 @@ func InitializeAuthUseCase() usecase.Authentication {
 func InitializeServer() *http.Server {
 	handlers := ProvideHandlers()
 	config := ProvideConfig()
-	httpConfig := ProvideServerConfig(config)
-	server := ProvideHTTPServer(handlers, httpConfig)
+	server := ProvideHTTPServer(handlers, config)
 	return server
 }
 
@@ -59,6 +58,5 @@ var HandlerSet = wire.NewSet(
 // ServerSet groups all server-related providers
 var ServerSet = wire.NewSet(
 	HandlerSet,
-	ProvideServerConfig,
 	ProvideHTTPServer,
 )

@@ -6,13 +6,14 @@ import (
 	"testing"
 
 	"github.com/harungurubudi/mtsg/internal/presentation/http/handler"
+	"github.com/harungurubudi/mtsg/pkg/config"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestServer_HealthCheck(t *testing.T) {
 	// Create test server
 	handlers := handler.NewHandlers()
-	config := &Config{Port: "8080"}
+	config := &config.Config{Server: config.ServerConfig{Port: "8080"}}
 	server := NewServer(handlers, config)
 
 	// Create test request
@@ -34,7 +35,7 @@ func TestServer_HealthCheck(t *testing.T) {
 func TestNewServer(t *testing.T) {
 	// Test server creation
 	handlers := handler.NewHandlers()
-	config := &Config{Port: "8080"}
+	config := &config.Config{Server: config.ServerConfig{Port: "8080"}}
 	server := NewServer(handlers, config)
 
 	// Verify server is not nil
@@ -49,8 +50,8 @@ func TestNewConfig(t *testing.T) {
 	config := NewConfig()
 
 	// Verify config has sensible defaults
-	assert.NotEmpty(t, config.Port)
-	assert.NotZero(t, config.ReadTimeout)
-	assert.NotZero(t, config.WriteTimeout)
-	assert.NotZero(t, config.IdleTimeout)
+	assert.NotEmpty(t, config.Server.Port)
+	assert.NotZero(t, config.Server.ReadTimeout)
+	assert.NotZero(t, config.Server.WriteTimeout)
+	assert.NotZero(t, config.Server.IdleTimeout)
 }

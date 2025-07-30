@@ -35,7 +35,6 @@ var HandlerSet = wire.NewSet(
 // ServerSet groups all server-related providers
 var ServerSet = wire.NewSet(
 	HandlerSet,
-	ProvideServerConfig,
 	ProvideHTTPServer,
 )
 
