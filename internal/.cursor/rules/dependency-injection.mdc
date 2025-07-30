@@ -1,0 +1,241 @@
+# Dependency Injection Rule
+
+## Overview
+Use Google Wire for dependency injection to maintain clean architecture, improve testability, and reduce boilerplate code. Wire provides compile-time dependency injection with type safety and no runtime reflection.
+
+## Framework Choice
+- **Wire (Google)**: Compile-time DI, type-safe, no reflection, minimal boilerplate
+- **Benefits**: Fast, safe, Go-native, perfect for clean architecture
+
+## Directory Structure
+```
+internal/
+├── di/                    # Dependency injection
+│   ├── providers.go       # Provider functions
+│   ├── wire.go           # Wire sets and initialization
+│   └── wire_gen.go       # Generated code (auto-generated)
+├── domain/               # Business logic (existing)
+├── repository/           # Data access (existing)
+├── usecase/              # Application logic (existing)
+└── presentation/         # HTTP handlers (existing)
+```
+
+## Provider Pattern
+
+### Repository Providers
+```go
+// Provide concrete implementations
+func ProvideUserRepository() repository.UserRepository {
+    return repository.NewUserRepository()
+}
+
+func ProvideAuthRepository() repository.AuthRepository {
+    return repository.NewAuthRepository()
+}
+
+func ProvideTenantRepository() repository.TenantRepository {
+    return repository.NewTenantRepository()
+}
+```
+
+### Use Case Providers
+```go
+// Inject dependencies into use cases
+func ProvideAuthUseCase(
+    userRepo repository.UserRepository,
+    authRepo repository.AuthRepository,
+) usecase.AuthenticationUseCase {
+    return usecase.NewAuthenticationUseCase(userRepo, authRepo)
+}
+
+func ProvideUserUseCase(
+    userRepo repository.UserRepository,
+) usecase.UserUseCase {
+    return usecase.NewUserUseCase(userRepo)
+}
+```
+
+### Handler Providers
+```go
+// Inject use cases into handlers
+func ProvideAuthHandler(
+    authUseCase usecase.AuthenticationUseCase,
+) *handler.AuthHandler {
+    return handler.NewAuthHandler(authUseCase)
+}
+
+func ProvideUserHandler(
+    userUseCase usecase.UserUseCase,
+) *handler.UserHandler {
+    return handler.NewUserHandler(userUseCase)
+}
+```
+
+## Wire Sets
+
+### Handler Set
+```go
+// Group related providers
+var HandlerSet = wire.NewSet(
+    // Repositories
+    ProvideUserRepository,
+    ProvideAuthRepository,
+    ProvideTenantRepository,
+    
+    // Use Cases
+    ProvideAuthUseCase,
+    ProvideUserUseCase,
+    
+    // Handlers
+    ProvideAuthHandler,
+    ProvideUserHandler,
+)
+```
+
+### Server Set
+```go
+// Server dependencies
+var ServerSet = wire.NewSet(
+    HandlerSet,
+    ProvideHTTPServer,
+    ProvideRouter,
+)
+```
+
+## Initialization
+
+### Main Application
+```go
+// cmd/main.go
+package main
+
+import "github.com/harungurubudi/mtsg/internal/di"
+
+//go:generate wire
+func main() {
+    handlers := di.InitializeHandlers()
+    
+    server := http.NewServer()
+    server.SetupRoutes(handlers)
+    server.Start(":8080")
+}
+```
+
+### Wire Generation
+```go
+// internal/di/wire.go
+package di
+
+import "github.com/google/wire"
+
+//go:generate wire
+func InitializeHandlers() *handler.Handlers {
+    panic(wire.Build(HandlerSet))
+}
+```
+
+## Testing Support
+
+### Mock Providers
+```go
+// testmock/providers.go
+func ProvideMockUserRepository() repository.UserRepository {
+    return &MockUserRepository{}
+}
+
+func ProvideMockAuthRepository() repository.AuthRepository {
+    return &MockAuthRepository{}
+}
+
+var MockHandlerSet = wire.NewSet(
+    ProvideMockUserRepository,
+    ProvideMockAuthRepository,
+    ProvideAuthUseCase,
+    ProvideAuthHandler,
+)
+```
+
+### Test Initialization
+```go
+// handler/auth_test.go
+func TestAuthHandler_Login(t *testing.T) {
+    handlers := di.InitializeMockHandlers()
+    
+    // Test with mock dependencies
+    assert.NotNil(t, handlers.Auth)
+}
+```
+
+## Configuration
+
+### Environment-based Providers
+```go
+// Configuration-based providers
+func ProvideDatabaseConfig() *config.DatabaseConfig {
+    return &config.DatabaseConfig{
+        Host:     os.Getenv("DB_HOST"),
+        Port:     os.Getenv("DB_PORT"),
+        Username: os.Getenv("DB_USER"),
+        Password: os.Getenv("DB_PASS"),
+    }
+}
+
+func ProvideRedisConfig() *config.RedisConfig {
+    return &config.RedisConfig{
+        Host: os.Getenv("REDIS_HOST"),
+        Port: os.Getenv("REDIS_PORT"),
+    }
+}
+```
+
+## Principles
+
+1. **Single Responsibility**: Each provider has one clear purpose
+2. **Dependency Declaration**: Explicitly declare all dependencies
+3. **Interface Segregation**: Use interfaces for loose coupling
+4. **Testability**: Easy to inject mocks for testing
+5. **Compile-time Safety**: Wire catches DI errors at compile time
+6. **Minimal Boilerplate**: Keep providers simple and focused
+
+## Naming Conventions
+
+- **Provider Functions**: `Provide{Type}()` (e.g., `ProvideUserRepository()`)
+- **Wire Sets**: `{Category}Set` (e.g., `HandlerSet`, `ServerSet`)
+- **Initialization Functions**: `Initialize{Category}()` (e.g., `InitializeHandlers()`)
+- **Mock Sets**: `Mock{Category}Set` (e.g., `MockHandlerSet`)
+
+## Commands
+
+### Generate Wire Code
+```bash
+# Generate DI code
+go generate ./...
+
+# Or run wire directly
+wire ./internal/di
+```
+
+### Install Wire
+```bash
+# Install wire CLI
+go install github.com/google/wire/cmd/wire@latest
+
+# Add to go.mod
+go get github.com/google/wire
+```
+
+## Benefits
+
+1. **Type Safety**: Compile-time verification of dependencies
+2. **Performance**: No runtime reflection overhead
+3. **Maintainability**: Clear dependency graph
+4. **Testability**: Easy to inject mocks
+5. **Scalability**: Easy to add new dependencies
+6. **Clean Architecture**: Supports proper layer separation
+
+Note: Wire generates clean, readable Go code that follows your project's patterns and conventions.
+description:
+globs:
+alwaysApply: false
+---
+ 

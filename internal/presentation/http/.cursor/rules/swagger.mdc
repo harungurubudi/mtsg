@@ -1,0 +1,435 @@
+# Swagger/OpenAPI Documentation Rule
+
+## Overview
+Implement Swagger/OpenAPI documentation using Echo-Swagger for automatic API documentation generation, interactive API explorer, and comprehensive endpoint documentation.
+
+## Framework Choice
+- **Echo-Swagger**: Official Swagger integration for Echo framework
+- **Swag**: Go code annotations for automatic Swagger generation
+- **Benefits**: Auto-generated docs, interactive explorer, code-first approach
+
+## Directory Structure
+```
+internal/presentation/http/
+├── docs/                    # Generated Swagger documentation
+│   ├── docs.go             # Auto-generated docs
+│   ├── swagger.json        # OpenAPI specification
+│   └── swagger.yaml        # OpenAPI specification (YAML)
+├── server.go               # Server with Swagger setup
+├── handler/                # HTTP handlers with Swagger annotations
+└── .cursor/rules/          # Rules directory
+    └── swagger.mdc         # This rule file
+```
+
+## Installation
+
+### Dependencies
+```bash
+# Install Echo-Swagger
+go get github.com/swaggo/echo-swagger
+
+# Install Swag CLI for code generation
+go install github.com/swaggo/swag/cmd/swag@latest
+
+# Install Swagger UI assets
+go get github.com/swaggo/files
+```
+
+## Main Application Setup
+
+### Swagger Info in main.go
+```go
+// @title MTSG API
+// @version 1.0
+// @description Multi-Tenant SaaS Gateway API
+// @termsOfService http://swagger.io/terms/
+
+// @contact.name API Support
+// @contact.url http://www.swagger.io/support
+// @contact.email support@swagger.io
+
+// @license.name Apache 2.0
+// @license.url http://www.apache.org/licenses/LICENSE-2.0.html
+
+// @host localhost:8080
+// @BasePath /api/v1
+
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
+// @description Type "Bearer" followed by a space and JWT token.
+
+// @tag.name Authentication
+// @tag.description Authentication operations
+
+// @tag.name Users
+// @tag.description User management operations
+
+// @tag.name Tenants
+// @tag.description Tenant management operations
+package main
+
+import (
+    "github.com/harungurubudi/mtsg/internal/di"
+    _ "github.com/harungurubudi/mtsg/internal/presentation/http/docs" // Import generated docs
+)
+
+func main() {
+    server := di.InitializeServer()
+    server.Start()
+}
+```
+
+## Server Integration
+
+### Swagger Route Setup
+```go
+// In server.go
+import (
+    "github.com/labstack/echo/v4"
+    "github.com/swaggo/echo-swagger"
+)
+
+func (s *Server) setupRoutes() {
+    // Swagger documentation routes
+    s.echo.GET("/swagger/*", echoSwagger.WrapHandler)
+    s.echo.GET("/docs", func(c echo.Context) error {
+        return c.Redirect(http.StatusMovedPermanently, "/swagger/index.html")
+    })
+    
+    // Health check endpoint
+    s.echo.GET("/health", s.healthCheck)
+    
+    // API v1 routes
+    v1 := s.echo.Group("/api/v1")
+    // ... existing routes
+}
+```
+
+## Handler Documentation
+
+### Authentication Handler Example
+```go
+// Login godoc
+// @Summary User login
+// @Description Authenticate user with email and password
+// @Tags Authentication
+// @Accept json
+// @Produce json
+// @Param request body dto.LoginRequest true "Login credentials"
+// @Success 200 {object} dto.LoginResponse "Login successful"
+// @Failure 400 {object} dto.ErrorResponse "Invalid credentials"
+// @Failure 401 {object} dto.ErrorResponse "Authentication failed"
+// @Failure 500 {object} dto.ErrorResponse "Internal server error"
+// @Router /auth/login [post]
+func (h *AuthHandler) Login(c echo.Context) error {
+    var req dto.LoginRequest
+    if err := c.Bind(&req); err != nil {
+        return echo.NewHTTPError(http.StatusBadRequest, "invalid request body")
+    }
+    
+    if err := c.Validate(&req); err != nil {
+        return echo.NewHTTPError(http.StatusBadRequest, "validation failed")
+    }
+    
+    credential := req.ToDomain()
+    session, err := h.authUseCase.Login(c.Request().Context(), credential)
+    if err != nil {
+        return h.handleAuthError(err)
+    }
+    
+    response := dto.NewLoginResponse(session)
+    return c.JSON(http.StatusOK, response)
+}
+
+// RefreshToken godoc
+// @Summary Refresh access token
+// @Description Generate new access token using refresh token
+// @Tags Authentication
+// @Accept json
+// @Produce json
+// @Param request body dto.RefreshTokenRequest true "Refresh token"
+// @Success 200 {object} dto.LoginResponse "Token refreshed successfully"
+// @Failure 400 {object} dto.ErrorResponse "Invalid refresh token"
+// @Failure 401 {object} dto.ErrorResponse "Authentication failed"
+// @Failure 500 {object} dto.ErrorResponse "Internal server error"
+// @Security BearerAuth
+// @Router /auth/refresh [post]
+func (h *AuthHandler) RefreshToken(c echo.Context) error {
+    // Implementation
+}
+
+// Logout godoc
+// @Summary User logout
+// @Description Invalidate user session and tokens
+// @Tags Authentication
+// @Accept json
+// @Produce json
+// @Success 200 {object} dto.SuccessResponse "Logout successful"
+// @Failure 500 {object} dto.ErrorResponse "Internal server error"
+// @Security BearerAuth
+// @Router /auth/logout [post]
+func (h *AuthHandler) Logout(c echo.Context) error {
+    // Implementation
+}
+```
+
+### User Handler Example
+```go
+// GetProfile godoc
+// @Summary Get user profile
+// @Description Retrieve current user's profile information
+// @Tags Users
+// @Accept json
+// @Produce json
+// @Success 200 {object} dto.UserProfileResponse "User profile"
+// @Failure 401 {object} dto.ErrorResponse "Unauthorized"
+// @Failure 404 {object} dto.ErrorResponse "User not found"
+// @Failure 500 {object} dto.ErrorResponse "Internal server error"
+// @Security BearerAuth
+// @Router /users/profile [get]
+func (h *UserHandler) GetProfile(c echo.Context) error {
+    // Implementation
+}
+
+// UpdateProfile godoc
+// @Summary Update user profile
+// @Description Update current user's profile information
+// @Tags Users
+// @Accept json
+// @Produce json
+// @Param request body dto.UpdateProfileRequest true "Profile update data"
+// @Success 200 {object} dto.UserProfileResponse "Profile updated successfully"
+// @Failure 400 {object} dto.ErrorResponse "Invalid request data"
+// @Failure 401 {object} dto.ErrorResponse "Unauthorized"
+// @Failure 404 {object} dto.ErrorResponse "User not found"
+// @Failure 500 {object} dto.ErrorResponse "Internal server error"
+// @Security BearerAuth
+// @Router /users/profile [put]
+func (h *UserHandler) UpdateProfile(c echo.Context) error {
+    // Implementation
+}
+```
+
+## DTO Documentation
+
+### Request/Response Models
+```go
+// LoginRequest represents login credentials
+// @Description Login request with email and password
+type LoginRequest struct {
+    // @Description User's email address
+    // @example user@example.com
+    Email string `json:"email" validate:"required,email"`
+    
+    // @Description User's password
+    // @example password123
+    Password string `json:"password" validate:"required,min=8"`
+}
+
+// LoginResponse represents successful login response
+// @Description Login response with access and refresh tokens
+type LoginResponse struct {
+    // @Description JWT access token
+    // @example eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+    AccessToken string `json:"access_token"`
+    
+    // @Description JWT refresh token
+    // @example eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+    RefreshToken string `json:"refresh_token"`
+    
+    // @Description Token expiration time in seconds
+    // @example 7200
+    ExpiresIn int64 `json:"expires_in"`
+    
+    // @Description Token type
+    // @example Bearer
+    TokenType string `json:"token_type"`
+}
+
+// ErrorResponse represents API error response
+// @Description Standard error response format
+type ErrorResponse struct {
+    // @Description Error message
+    // @example Invalid credentials
+    Error string `json:"error"`
+    
+    // @Description Error code
+    // @example AUTH_FAILED
+    Code string `json:"code"`
+    
+    // @Description HTTP status code
+    // @example 401
+    Status int `json:"status"`
+    
+    // @Description Timestamp of the error
+    // @example 2023-07-29T17:30:00Z
+    Timestamp time.Time `json:"timestamp"`
+}
+```
+
+## Configuration
+
+### Swagger Configuration
+```go
+// In server.go
+func (s *Server) setupSwagger() {
+    // Configure Swagger info
+    s.echo.GET("/swagger/*", echoSwagger.WrapHandler)
+    
+    // Optional: Custom Swagger configuration
+    s.echo.GET("/swagger/*", echoSwagger.WrapHandlerWithConfig(echoSwagger.Config{
+        URL: "/swagger/doc.json", // URL to swagger spec
+        DeepLinking: true,
+        DocExpansion: "list",
+        DomID: "swagger-ui",
+    }))
+}
+```
+
+## Generation Commands
+
+### Generate Swagger Documentation
+```bash
+# Generate docs from code annotations
+swag init -g cmd/main.go -o internal/presentation/http/docs
+
+# Generate with specific output format
+swag init -g cmd/main.go -o internal/presentation/http/docs --parseDependency --parseInternal
+
+# Generate with custom configuration
+swag init -g cmd/main.go \
+    -o internal/presentation/http/docs \
+    --parseDependency \
+    --parseInternal \
+    --parseDepth 1 \
+    --instanceName mtsg
+```
+
+### Auto-generation Script
+```bash
+#!/bin/bash
+# scripts/generate-swagger.sh
+
+echo "Generating Swagger documentation..."
+
+# Generate docs
+swag init -g cmd/main.go -o internal/presentation/http/docs
+
+# Check if generation was successful
+if [ $? -eq 0 ]; then
+    echo "✅ Swagger documentation generated successfully!"
+    echo "📖 Access documentation at: http://localhost:8080/swagger/index.html"
+else
+    echo "❌ Failed to generate Swagger documentation"
+    exit 1
+fi
+```
+
+## Testing
+
+### Swagger Documentation Test
+```go
+func TestSwaggerEndpoints(t *testing.T) {
+    server := NewServer(nil, &Config{Port: "8080"})
+    
+    // Test Swagger UI endpoint
+    req := httptest.NewRequest(http.MethodGet, "/swagger/index.html", nil)
+    rec := httptest.NewRecorder()
+    c := server.echo.NewContext(req, rec)
+    
+    err := server.echo.Router().Find(http.MethodGet, "/swagger/index.html", c)
+    assert.NoError(t, err)
+    
+    // Test Swagger JSON endpoint
+    req = httptest.NewRequest(http.MethodGet, "/swagger/doc.json", nil)
+    rec = httptest.NewRecorder()
+    c = server.echo.NewContext(req, rec)
+    
+    err = server.echo.Router().Find(http.MethodGet, "/swagger/doc.json", c)
+    assert.NoError(t, err)
+}
+```
+
+## Best Practices
+
+### 1. Documentation Standards
+- **Consistent formatting**: Use consistent comment formatting
+- **Clear descriptions**: Provide clear, concise descriptions
+- **Examples**: Include realistic examples for all parameters
+- **Error responses**: Document all possible error responses
+
+### 2. Code Organization
+- **Group by tags**: Organize endpoints by functional areas
+- **Consistent naming**: Use consistent naming conventions
+- **Versioning**: Include API versioning in documentation
+
+### 3. Security Documentation
+- **Authentication**: Document authentication methods
+- **Authorization**: Specify required permissions
+- **Security schemes**: Define security schemes properly
+
+### 4. Response Examples
+```go
+// @Success 200 {object} dto.LoginResponse "Login successful"
+// @Failure 400 {object} dto.ErrorResponse "Invalid credentials"
+// @Failure 401 {object} dto.ErrorResponse "Authentication failed"
+// @Failure 500 {object} dto.ErrorResponse "Internal server error"
+```
+
+## Development Workflow
+
+### 1. Development Phase
+```bash
+# Start development server
+go run cmd/main.go
+
+# Access Swagger UI
+open http://localhost:8080/swagger/index.html
+```
+
+### 2. Documentation Updates
+```bash
+# Update code annotations
+# Edit handler files with new @swagger comments
+
+# Regenerate documentation
+swag init -g cmd/main.go -o internal/presentation/http/docs
+
+# Restart server to see changes
+go run cmd/main.go
+```
+
+### 3. CI/CD Integration
+```yaml
+# .github/workflows/swagger.yml
+name: Generate Swagger Docs
+on: [push, pull_request]
+jobs:
+  swagger:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-go@v2
+        with:
+          go-version: '1.21'
+      - run: go install github.com/swaggo/swag/cmd/swag@latest
+      - run: swag init -g cmd/main.go -o internal/presentation/http/docs
+      - run: git diff --exit-code || (echo "Swagger docs need updating" && exit 1)
+```
+
+## Benefits
+
+1. **Interactive Documentation**: Live API explorer
+2. **Auto-generated**: Documentation stays in sync with code
+3. **Client Generation**: Generate client SDKs from OpenAPI spec
+4. **Testing**: Use Swagger UI for manual API testing
+5. **Documentation**: Comprehensive API documentation
+6. **Standards**: Follow OpenAPI 3.0 standards
+
+Note: Swagger documentation should be treated as living documentation that evolves with your API. Regular updates and maintenance ensure it remains accurate and useful.
+description:
+globs:
+alwaysApply: false
+---
+ 

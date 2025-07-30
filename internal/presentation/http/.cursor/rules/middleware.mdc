@@ -1,0 +1,388 @@
+# Middleware Management Rule
+
+## Overview
+This rule defines the middleware management approach for the Echo HTTP server, including organization, implementation patterns, and best practices for custom middleware development.
+
+## Location and Organization
+
+### Directory Structure
+All custom middleware must be placed in the `internal/presentation/http/middleware/` directory:
+
+```
+internal/presentation/http/middleware/
+├── auth.go           # Authentication middleware
+├── cors.go           # CORS middleware
+├── logging.go        # Request logging middleware
+├── rate_limit.go     # Rate limiting middleware
+├── recovery.go       # Panic recovery middleware
+├── validation.go     # Request validation middleware
+├── middleware.go     # Middleware factory functions
+└── middleware_test.go # Middleware tests
+```
+
+### File Naming Convention
+- Use descriptive, lowercase names with underscores: `auth.go`, `rate_limit.go`
+- Group related middleware in single files when appropriate
+- Create separate files for complex middleware implementations
+
+## Middleware Implementation Patterns
+
+### 1. Basic Middleware Structure
+```go
+package middleware
+
+import (
+    "github.com/labstack/echo/v4"
+    "github.com/labstack/echo/v4/middleware"
+)
+
+// CustomMiddleware provides custom functionality
+func CustomMiddleware() echo.MiddlewareFunc {
+    return func(next echo.HandlerFunc) echo.HandlerFunc {
+        return func(c echo.Context) error {
+            // Pre-processing logic here
+            
+            // Call next handler
+            if err := next(c); err != nil {
+                c.Error(err)
+            }
+            
+            // Post-processing logic here
+            return nil
+        }
+    }
+}
+```
+
+### 2. Configuration-Based Middleware
+```go
+// CustomMiddlewareConfig holds configuration for custom middleware
+type CustomMiddlewareConfig struct {
+    Enabled bool   `json:"enabled"`
+    Timeout string `json:"timeout"`
+    // Add other configuration fields as needed
+}
+
+// CustomMiddlewareWithConfig creates middleware with configuration
+func CustomMiddlewareWithConfig(config CustomMiddlewareConfig) echo.MiddlewareFunc {
+    return func(next echo.HandlerFunc) echo.HandlerFunc {
+        return func(c echo.Context) error {
+            if !config.Enabled {
+                return next(c)
+            }
+            
+            // Use configuration values
+            // ... middleware logic
+            
+            return next(c)
+        }
+    }
+}
+```
+
+### 3. Dependency Injection Middleware
+```go
+// CustomMiddlewareWithDeps creates middleware with dependencies
+func CustomMiddlewareWithDeps(deps *Dependencies) echo.MiddlewareFunc {
+    return func(next echo.HandlerFunc) echo.HandlerFunc {
+        return func(c echo.Context) error {
+            // Use dependencies
+            // ... middleware logic
+            
+            return next(c)
+        }
+    }
+}
+```
+
+## Required Middleware
+
+### 1. Authentication Middleware (`auth.go`)
+```go
+// AuthMiddleware provides JWT-based authentication
+func AuthMiddleware(authUseCase usecase.Authentication) echo.MiddlewareFunc {
+    return func(next echo.HandlerFunc) echo.HandlerFunc {
+        return func(c echo.Context) error {
+            // Extract token from Authorization header
+            // Validate token using auth use case
+            // Set user context if valid
+            // Return 401 if invalid
+            
+            return next(c)
+        }
+    }
+}
+```
+
+### 2. CORS Middleware (`cors.go`)
+```go
+// CORSMiddleware provides CORS configuration
+func CORSMiddleware() echo.MiddlewareFunc {
+    return middleware.CORSWithConfig(middleware.CORSConfig{
+        AllowOrigins: []string{"*"},
+        AllowMethods: []string{echo.GET, echo.PUT, echo.POST, echo.DELETE},
+        AllowHeaders: []string{echo.HeaderOrigin, echo.HeaderContentType, echo.HeaderAccept, echo.HeaderAuthorization},
+    })
+}
+```
+
+### 3. Logging Middleware (`logging.go`)
+```go
+// LoggingMiddleware provides request logging
+func LoggingMiddleware() echo.MiddlewareFunc {
+    return middleware.LoggerWithConfig(middleware.LoggerConfig{
+        Format: "time=${time_rfc3339} id=${id} remote_ip=${remote_ip} " +
+                "host=${host} method=${method} uri=${uri} " +
+                "user_agent=${user_agent} status=${status} " +
+                "error=${error} latency=${latency} latency_human=${latency_human} " +
+                "bytes_in=${bytes_in} bytes_out=${bytes_out}\n",
+    })
+}
+```
+
+### 4. Recovery Middleware (`recovery.go`)
+```go
+// RecoveryMiddleware provides panic recovery
+func RecoveryMiddleware() echo.MiddlewareFunc {
+    return middleware.RecoverWithConfig(middleware.RecoverConfig{
+        StackSize: 1 << 10, // 1 KB
+    })
+}
+```
+
+### 5. Rate Limiting Middleware (`rate_limit.go`)
+```go
+// RateLimitMiddleware provides rate limiting functionality
+func RateLimitMiddleware(redisAdapter redis.AdapterRepository) echo.MiddlewareFunc {
+    return func(next echo.HandlerFunc) echo.HandlerFunc {
+        return func(c echo.Context) error {
+            // Implement rate limiting logic using Redis
+            // Check request count per IP/user
+            // Return 429 if limit exceeded
+            
+            return next(c)
+        }
+    }
+}
+```
+
+### 6. Validation Middleware (`validation.go`)
+```go
+// ValidationMiddleware provides request validation
+func ValidationMiddleware() echo.MiddlewareFunc {
+    return func(next echo.HandlerFunc) echo.HandlerFunc {
+        return func(c echo.Context) error {
+            // Validate request body, query params, headers
+            // Return 400 if validation fails
+            
+            return next(c)
+        }
+    }
+}
+```
+
+## Middleware Factory Functions (`middleware.go`)
+
+### Centralized Middleware Management
+```go
+// MiddlewareFactory provides factory functions for middleware
+type MiddlewareFactory struct {
+    authUseCase    usecase.Authentication
+    redisAdapter   redis.AdapterRepository
+    config         *config.Config
+}
+
+// NewMiddlewareFactory creates a new middleware factory
+func NewMiddlewareFactory(
+    authUseCase usecase.Authentication,
+    redisAdapter redis.AdapterRepository,
+    config *config.Config,
+) *MiddlewareFactory {
+    return &MiddlewareFactory{
+        authUseCase:  authUseCase,
+        redisAdapter: redisAdapter,
+        config:       config,
+    }
+}
+
+// GlobalMiddleware returns all global middleware
+func (f *MiddlewareFactory) GlobalMiddleware() []echo.MiddlewareFunc {
+    return []echo.MiddlewareFunc{
+        f.RecoveryMiddleware(),
+        f.LoggingMiddleware(),
+        f.CORSMiddleware(),
+    }
+}
+
+// AuthMiddleware returns authentication middleware
+func (f *MiddlewareFactory) AuthMiddleware() echo.MiddlewareFunc {
+    return AuthMiddleware(f.authUseCase)
+}
+
+// RateLimitMiddleware returns rate limiting middleware
+func (f *MiddlewareFactory) RateLimitMiddleware() echo.MiddlewareFunc {
+    return RateLimitMiddleware(f.redisAdapter)
+}
+```
+
+## Middleware Registration
+
+### Server Integration
+```go
+// In server.go setupMiddleware function
+func (s *Server) setupMiddleware() {
+    // Create middleware factory
+    factory := middleware.NewMiddlewareFactory(
+        s.authUseCase,
+        s.redisAdapter,
+        s.config,
+    )
+    
+    // Register global middleware
+    for _, m := range factory.GlobalMiddleware() {
+        s.echo.Use(m)
+    }
+}
+
+// In setupRoutes function
+func (s *Server) setupRoutes() {
+    factory := middleware.NewMiddlewareFactory(
+        s.authUseCase,
+        s.redisAdapter,
+        s.config,
+    )
+    
+    // Public routes (no auth required)
+    public := s.echo.Group("/api/v1")
+    public.POST("/auth/login", s.handlers.Auth.Login)
+    
+    // Protected routes (auth required)
+    protected := s.echo.Group("/api/v1")
+    protected.Use(factory.AuthMiddleware())
+    protected.Use(factory.RateLimitMiddleware())
+    protected.GET("/users/profile", s.handlers.User.GetProfile)
+}
+```
+
+## Testing Middleware
+
+### Test Structure (`middleware_test.go`)
+```go
+package middleware
+
+import (
+    "net/http"
+    "net/http/httptest"
+    "testing"
+    
+    "github.com/labstack/echo/v4"
+    "github.com/stretchr/testify/assert"
+)
+
+func TestAuthMiddleware(t *testing.T) {
+    // Setup
+    e := echo.New()
+    req := httptest.NewRequest(http.MethodGet, "/", nil)
+    rec := httptest.NewRecorder()
+    c := e.NewContext(req, rec)
+    
+    // Test without token
+    h := AuthMiddleware(mockAuthUseCase)
+    err := h(func(c echo.Context) error {
+        return c.String(http.StatusOK, "test")
+    })(c)
+    
+    assert.Error(t, err)
+    assert.Equal(t, http.StatusUnauthorized, rec.Code)
+}
+
+func TestRateLimitMiddleware(t *testing.T) {
+    // Setup test with Redis mock
+    // Test rate limiting logic
+}
+```
+
+## Best Practices
+
+### 1. Error Handling
+- Always handle errors properly in middleware
+- Use appropriate HTTP status codes
+- Log errors for debugging
+- Don't expose sensitive information in error responses
+
+### 2. Performance
+- Keep middleware lightweight and efficient
+- Use caching where appropriate
+- Avoid blocking operations in middleware
+- Consider async operations for heavy tasks
+
+### 3. Security
+- Validate all inputs in middleware
+- Sanitize data before processing
+- Use secure defaults
+- Implement proper authentication and authorization
+
+### 4. Logging
+- Log important events in middleware
+- Include relevant context (user ID, IP, etc.)
+- Use structured logging
+- Don't log sensitive information
+
+### 5. Configuration
+- Make middleware configurable
+- Use environment variables for sensitive config
+- Provide sensible defaults
+- Validate configuration on startup
+
+## Middleware Order
+
+### Global Middleware (Applied to all routes)
+1. Recovery (panic handling)
+2. Logging (request logging)
+3. CORS (cross-origin requests)
+
+### Route-Specific Middleware (Applied to specific groups)
+1. Rate Limiting
+2. Authentication
+3. Authorization
+4. Validation
+5. Custom business logic
+
+## Dependencies
+
+### Required Dependencies
+```go
+import (
+    "github.com/labstack/echo/v4"
+    "github.com/labstack/echo/v4/middleware"
+    "github.com/harungurubudi/mtsg/internal/usecase"
+    "github.com/harungurubudi/mtsg/pkg/redis"
+    "github.com/harungurubudi/mtsg/pkg/config"
+)
+```
+
+## Migration from Current Setup
+
+When migrating from the current simple middleware setup:
+
+1. Create the middleware directory structure
+2. Move existing middleware to appropriate files
+3. Implement the middleware factory pattern
+4. Update server setup to use the factory
+5. Add comprehensive tests
+6. Update documentation
+
+## Future Extensions
+
+The middleware system is designed to be easily extensible:
+
+1. **Tenant Isolation Middleware**: Add tenant context to requests
+2. **Audit Logging Middleware**: Log all API calls for compliance
+3. **Metrics Middleware**: Collect performance metrics
+4. **Cache Middleware**: Implement response caching
+5. **Compression Middleware**: Compress responses
+6. **Security Headers Middleware**: Add security headers
+description:
+globs:
+alwaysApply: false
+---

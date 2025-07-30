@@ -1,0 +1,268 @@
+# Configuration Management Rule
+
+## Overview
+This rule defines the configuration management approach using `github.com/spf13/viper` for environment-based configuration with support for multiple formats and hierarchical configuration.
+
+## Location
+Configuration should be placed in `pkg/config/` directory to be accessible across all layers while maintaining clean architecture principles.
+
+## Structure
+
+### Directory Layout
+```
+pkg/
+  └── config/
+      ├── config.go          # Main config struct and Viper setup
+      ├── config_test.go     # Unit tests
+      ├── defaults.go        # Default configuration values
+      └── README.md          # Configuration documentation
+```
+
+### Main Config Struct
+```go
+// Config represents the global application configuration
+type Config struct {
+    Server ServerConfig `mapstructure:"server"`
+    Redis  RedisConfig  `mapstructure:"redis"`
+}
+```
+
+## Viper Configuration
+
+### Environment Variable Mapping
+- Use `mapstructure` tags for struct field mapping
+- Environment variables should be prefixed with `MTSG_`
+- Use snake_case for environment variable names
+- Example: `MTSG_SERVER_PORT` maps to `Config.Server.Port`
+
+### Configuration Sources Priority (highest to lowest)
+1. Environment variables
+2. Configuration files (config.yaml, config.json, etc.)
+3. Default values
+
+### Supported Configuration Formats
+- YAML (primary)
+- JSON
+- TOML
+- HCL
+- INI
+- envfile
+
+## Implementation Guidelines
+
+### 1. Viper Setup
+```go
+func setupViper() *viper.Viper {
+    v := viper.New()
+    
+    // Set configuration file name and type
+    v.SetConfigName("config")
+    v.SetConfigType("yaml")
+    
+    // Add configuration paths
+    v.AddConfigPath(".")
+    v.AddConfigPath("./config")
+    v.AddConfigPath("/etc/mtsg")
+    
+    // Enable environment variables
+    v.SetEnvPrefix("MTSG")
+    v.AutomaticEnv()
+    v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+    
+    return v
+}
+```
+
+### 2. Configuration Loading
+```go
+// Load loads configuration from multiple sources
+func Load() (*Config, error) {
+    v := setupViper()
+    
+    // Set defaults
+    setDefaults(v)
+    
+    // Read config file (optional)
+    if err := v.ReadInConfig(); err != nil {
+        if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
+            return nil, fmt.Errorf("failed to read config file: %w", err)
+        }
+    }
+    
+    var config Config
+    if err := v.Unmarshal(&config); err != nil {
+        return nil, fmt.Errorf("failed to unmarshal config: %w", err)
+    }
+    
+    return &config, nil
+}
+```
+
+### 3. Default Values
+```go
+// setDefaults sets default configuration values
+func setDefaults(v *viper.Viper) {
+    // Server defaults
+    v.SetDefault("server.port", "8080")
+    v.SetDefault("server.read_timeout", "30s")
+    v.SetDefault("server.write_timeout", "30s")
+    v.SetDefault("server.idle_timeout", "60s")
+    
+    // Redis defaults
+    v.SetDefault("redis.host", "localhost")
+    v.SetDefault("redis.port", 6379)
+    v.SetDefault("redis.db", 0)
+}
+```
+
+## Configuration Structs
+
+### ServerConfig
+```go
+type ServerConfig struct {
+    Port         string        `mapstructure:"port"`
+    ReadTimeout  time.Duration `mapstructure:"read_timeout"`
+    WriteTimeout time.Duration `mapstructure:"write_timeout"`
+    IdleTimeout  time.Duration `mapstructure:"idle_timeout"`
+    Environment  string        `mapstructure:"environment"`
+}
+```
+
+### RedisConfig
+```go
+type RedisConfig struct {
+    Host     string `mapstructure:"host"`
+    Port     int    `mapstructure:"port"`
+    Password string `mapstructure:"password"`
+    DB       int    `mapstructure:"db"`
+    PoolSize int    `mapstructure:"pool_size"`
+}
+```
+
+
+
+## Environment Variables
+
+### Required Environment Variables
+- None for now (will be added later)
+
+### Optional Environment Variables
+- `MTSG_SERVER_PORT` - Server port (default: 8080)
+- `MTSG_SERVER_ENVIRONMENT` - Environment (default: development)
+- `MTSG_REDIS_HOST` - Redis host (default: localhost)
+- `MTSG_REDIS_PORT` - Redis port (default: 6379)
+- `MTSG_REDIS_PASSWORD` - Redis password (default: empty)
+- `MTSG_REDIS_DB` - Redis database (default: 0)
+
+## Configuration Files
+
+### Example config.yaml
+```yaml
+server:
+  port: "8080"
+  read_timeout: "30s"
+  write_timeout: "30s"
+  idle_timeout: "60s"
+  environment: "development"
+
+redis:
+  host: "localhost"
+  port: 6379
+  password: ""
+  db: 0
+  pool_size: 10
+```
+
+## Dependency Injection Integration
+
+### Provider Function
+```go
+// internal/di/providers.go
+func ProvideConfig() (*config.Config, error) {
+    return config.Load()
+}
+```
+
+### Wire Integration
+```go
+// internal/di/wire.go
+var ConfigSet = wire.NewSet(
+    ProvideConfig,
+    // ... other providers
+)
+```
+
+## Testing
+
+### Test Configuration
+```go
+func TestConfig() *Config {
+    return &Config{
+        Server: ServerConfig{
+            Port:         "8081",
+            ReadTimeout:  5 * time.Second,
+            WriteTimeout: 5 * time.Second,
+            IdleTimeout:  10 * time.Second,
+            Environment:  "test",
+        },
+        // ... other test configs
+    }
+}
+```
+
+### Environment Setup for Tests
+```go
+func setupTestEnv() {
+    os.Setenv("MTSG_SERVER_PORT", "8081")
+    os.Setenv("MTSG_SERVER_ENVIRONMENT", "test")
+    os.Setenv("MTSG_REDIS_HOST", "localhost")
+    os.Setenv("MTSG_REDIS_PORT", "6379")
+}
+```
+
+## Validation
+
+### Configuration Validation
+```go
+// Validate validates the configuration
+func (c *Config) Validate() error {
+    // Add validation rules as needed when more configs are added
+    return nil
+}
+```
+
+## Security Considerations
+
+### Sensitive Data
+- Never log sensitive configuration values (passwords, keys)
+- Use environment variables for sensitive data in production
+- Consider using a secrets management service for production
+
+### Configuration Validation
+- Always validate configuration on startup
+- Provide clear error messages for missing required values
+- Use appropriate default values for non-sensitive configuration
+
+## Best Practices
+
+1. **Environment-specific configs**: Use different config files for different environments
+2. **Validation**: Always validate configuration on startup
+3. **Defaults**: Provide sensible defaults for all configuration options
+4. **Documentation**: Document all configuration options and their purposes
+5. **Testing**: Test configuration loading with different sources
+6. **Error handling**: Provide clear error messages for configuration issues
+7. **Hot reloading**: Consider implementing configuration hot reloading for development
+
+## Migration from Current Config
+
+When migrating from the current simple config approach:
+
+1. Create the new config structure in `pkg/config/`
+2. Update DI providers to use the new config
+3. Update existing code to use the new config struct
+4. Add configuration validation
+5. Update documentation and examples
+description:
+globs:
+alwaysApply: false
+---

@@ -8,8 +8,8 @@ import (
 
 // Credential represents the input required for user authentication (login)
 type Credential struct {
-	Email    user.Email    `json:"email" validate:"required,email"`
-	Password user.Password `json:"password" validate:"required,password"`
+	Email    user.Email    `json:"email"`
+	Password user.Password `json:"password"`
 }
 
 // Verify checks if the provided password matches the user's stored ciphertext.

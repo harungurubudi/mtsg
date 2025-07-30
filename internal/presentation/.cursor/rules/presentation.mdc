@@ -1,0 +1,55 @@
+# Presentation Layer Rule
+
+## Overview
+The presentation layer handles HTTP requests, responses, and user interface concerns. It maps domain errors to HTTP responses and transforms data between external formats and internal domain models.
+
+## Directory Structure
+```
+internal/presentation/
+├── http/              # HTTP-specific implementation
+│   ├── handler/       # HTTP request handlers
+│   ├── middleware/    # HTTP middleware
+│   ├── router/        # Route definitions
+│   └── server.go      # HTTP server configuration
+└── dto/               # Data Transfer Objects
+```
+
+## Responsibilities
+
+1. **Request Handling**: Parse and validate incoming HTTP requests
+2. **Response Formatting**: Format responses for external clients
+3. **Error Mapping**: Map domain errors to appropriate HTTP responses
+4. **Data Transformation**: Transform between external DTOs and internal domain models
+5. **Authentication**: Handle authentication and authorization at the HTTP level
+6. **Middleware**: Apply cross-cutting concerns (logging, CORS, etc.)
+
+## Principles
+
+1. **Separation of Concerns**: Handlers only handle HTTP concerns, business logic stays in use cases
+2. **Dependency Injection**: Handlers receive use cases through constructor injection
+3. **Error Mapping**: Domain errors are mapped to appropriate HTTP responses
+4. **DTO Transformation**: Use DTOs to transform between external and internal formats
+5. **Consistent Response Format**: All responses follow the same structure
+6. **Middleware Composition**: Use middleware for cross-cutting concerns
+7. **Route Organization**: Group routes by functionality and access level
+
+## Layer Boundaries
+
+- **Input**: HTTP requests with DTOs
+- **Output**: HTTP responses with structured data
+- **Dependencies**: Use cases from the application layer
+- **No Dependencies**: Domain layer, repository layer
+
+## Framework Choice
+- Use Echo framework for HTTP handling
+- Benefits: Lightweight, fast, built-in validation, good middleware support
+
+## Testing Guidelines
+
+1. **Handler Tests**: Test handlers with mocked use cases
+2. **Middleware Tests**: Test middleware in isolation
+3. **Integration Tests**: Test complete request/response flow
+4. **Error Scenarios**: Test all error mapping scenarios
+
+Note: This presentation layer follows clean architecture principles by keeping HTTP concerns separate from business logic. For specific implementation details, see subdirectory rules.
+ 
