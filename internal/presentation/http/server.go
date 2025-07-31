@@ -63,7 +63,7 @@ func (s *Server) setupRoutes() {
 		return c.Redirect(http.StatusMovedPermanently, "/swagger/index.html")
 	})
 
-	// Ping endpoint
+	// Ping endpoints
 	s.echo.GET("/ping", s.handlers.Ping.Ping)
 
 	// Health check endpoint
@@ -82,6 +82,7 @@ func (s *Server) setupRoutes() {
 	// TODO: Add authentication middleware here
 	// protected.Use(AuthMiddleware(s.handlers.Auth.UseCase))
 	protected.POST("/auth/logout", s.handlers.Auth.Logout)
+	protected.GET("/ping/protected", s.handlers.Ping.ProtectedPing)
 	// TODO: Add other protected endpoints here
 	// protected.GET("/users/profile", s.handlers.User.GetProfile)
 }

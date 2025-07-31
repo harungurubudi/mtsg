@@ -238,6 +238,40 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/ping/protected": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Protected ping endpoint that requires authentication",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Health"
+                ],
+                "summary": "Protected health check endpoint",
+                "responses": {
+                    "200": {
+                        "description": "Protected ping successful",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ProtectedPingResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized - missing or invalid token",
+                        "schema": {
+                            "$ref": "#/definitions/error.HTTPError"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
@@ -326,6 +360,31 @@ const docTemplate = `{
                 "timestamp": {
                     "type": "string",
                     "example": "2023-07-29T17:30:00Z"
+                }
+            }
+        },
+        "handler.ProtectedPingResponse": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string",
+                    "example": "protected pong"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "ok"
+                },
+                "timestamp": {
+                    "type": "string",
+                    "example": "2023-07-29T17:30:00Z"
+                },
+                "user_email": {
+                    "type": "string",
+                    "example": "user@example.com"
+                },
+                "user_id": {
+                    "type": "string",
+                    "example": "550e8400-e29b-41d4-a716-446655440000"
                 }
             }
         }
