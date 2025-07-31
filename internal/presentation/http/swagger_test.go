@@ -11,7 +11,8 @@ import (
 
 func TestSwaggerEndpoints(t *testing.T) {
 	// Create test server
-	handlers := handler.NewHandlers()
+	mockAuth := new(MockAuthentication)
+	handlers := handler.NewHandlers(mockAuth)
 	config := &config.Config{Server: config.ServerConfig{Port: "8080"}}
 	server := NewServer(handlers, config)
 

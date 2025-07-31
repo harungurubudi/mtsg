@@ -1,20 +1,24 @@
 package handler
 
+import (
+	"github.com/harungurubudi/mtsg/internal/usecase"
+)
+
 // Handlers holds all HTTP handlers
 type Handlers struct {
 	Ping *PingHandler
+	Auth *AuthHandler
 	// TODO: Add other handlers as they are implemented
-	// Auth  *AuthHandler
 	// User  *UserHandler
 	// Tenant *TenantHandler
 }
 
 // NewHandlers creates a new Handlers instance
-func NewHandlers() *Handlers {
+func NewHandlers(authUseCase usecase.Authentication) *Handlers {
 	return &Handlers{
 		Ping: NewPingHandler(),
+		Auth: NewAuthHandler(authUseCase),
 		// TODO: Initialize other handlers
-		// Auth:  NewAuthHandler(authUseCase),
 		// User:  NewUserHandler(userUseCase),
 		// Tenant: NewTenantHandler(tenantRepo),
 	}

@@ -27,8 +27,13 @@ func InitializeAuthUseCase() usecase.Authentication {
 
 //go:generate wire
 func InitializeServer() *http.Server {
-	handlers := ProvideHandlers()
+	userRepository := ProvideUserRepository()
 	config := ProvideConfig()
+	client := ProvideRedisClient(config)
+	adapterRepository := ProvideRedisAdapter(client)
+	generatorRepository := ProvideTokenGenerator(adapterRepository)
+	authentication := ProvideAuthUseCase(userRepository, generatorRepository)
+	handlers := ProvideHandlers(authentication)
 	server := ProvideHTTPServer(handlers, config)
 	return server
 }

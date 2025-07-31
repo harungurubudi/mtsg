@@ -64,8 +64,8 @@ func ProvideAuthUseCase(
 // Handler Providers
 
 // ProvideHandlers provides HTTP handlers
-func ProvideHandlers() *handler.Handlers {
-	return handler.NewHandlers()
+func ProvideHandlers(authUseCase usecase.Authentication) *handler.Handlers {
+	return handler.NewHandlers(authUseCase)
 }
 
 // Server Providers

@@ -1,18 +1,46 @@
 package http
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	"github.com/harungurubudi/mtsg/internal/domain/authentication"
+	"github.com/harungurubudi/mtsg/internal/domain/tenant"
+	"github.com/harungurubudi/mtsg/internal/domain/user"
 	"github.com/harungurubudi/mtsg/internal/presentation/http/handler"
 	"github.com/harungurubudi/mtsg/pkg/config"
+	"github.com/harungurubudi/mtsg/pkg/token"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
+
+// MockAuthentication is a simple mock for testing
+type MockAuthentication struct {
+	mock.Mock
+}
+
+func (m *MockAuthentication) Login(ctx context.Context, credential *authentication.Credential) (*authentication.Session, error) {
+	return nil, nil
+}
+
+func (m *MockAuthentication) VerifyToken(ctx context.Context, token token.Token, subject string, tenantID tenant.TenantID) (*user.User, error) {
+	return nil, nil
+}
+
+func (m *MockAuthentication) RefreshToken(ctx context.Context, refreshToken token.Token) (*authentication.Session, error) {
+	return nil, nil
+}
+
+func (m *MockAuthentication) Logout(ctx context.Context, accessToken token.Token) error {
+	return nil
+}
 
 func TestServer_HealthCheck(t *testing.T) {
 	// Create test server
-	handlers := handler.NewHandlers()
+	mockAuth := new(MockAuthentication)
+	handlers := handler.NewHandlers(mockAuth)
 	config := &config.Config{Server: config.ServerConfig{Port: "8080"}}
 	server := NewServer(handlers, config)
 
@@ -34,7 +62,8 @@ func TestServer_HealthCheck(t *testing.T) {
 
 func TestNewServer(t *testing.T) {
 	// Test server creation
-	handlers := handler.NewHandlers()
+	mockAuth := new(MockAuthentication)
+	handlers := handler.NewHandlers(mockAuth)
 	config := &config.Config{Server: config.ServerConfig{Port: "8080"}}
 	server := NewServer(handlers, config)
 

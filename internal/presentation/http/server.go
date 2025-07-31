@@ -69,18 +69,20 @@ func (s *Server) setupRoutes() {
 	// Health check endpoint
 	s.echo.GET("/health", s.healthCheck)
 
-	// API v1 routes (for future endpoints)
+	// API v1 routes
 	v1 := s.echo.Group("/api/v1")
 
 	// Public routes (no auth required)
-	_ = v1.Group("")
-	// TODO: Add authentication endpoints here
-	// public.POST("/auth/login", s.handlers.Auth.Login)
+	public := v1.Group("")
+	public.POST("/auth/login", s.handlers.Auth.Login)
+	public.POST("/auth/refresh", s.handlers.Auth.RefreshToken)
 
 	// Protected routes (auth required)
-	_ = v1.Group("")
+	protected := v1.Group("")
 	// TODO: Add authentication middleware here
 	// protected.Use(AuthMiddleware(s.handlers.Auth.UseCase))
+	protected.POST("/auth/logout", s.handlers.Auth.Logout)
+	// TODO: Add other protected endpoints here
 	// protected.GET("/users/profile", s.handlers.User.GetProfile)
 }
 
