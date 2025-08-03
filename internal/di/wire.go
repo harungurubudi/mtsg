@@ -5,37 +5,44 @@ package di
 
 import (
 	"github.com/google/wire"
+	"github.com/harungurubudi/mtsg/internal/di/provider"
 	"github.com/harungurubudi/mtsg/internal/presentation/http"
 	"github.com/harungurubudi/mtsg/internal/usecase"
 )
 
 // ConfigSet groups all configuration-related providers
 var ConfigSet = wire.NewSet(
-	ProvideConfig,
+	provider.ProvideConfig,
 )
 
 // HandlerSet groups all handler-related providers
 var HandlerSet = wire.NewSet(
 	ConfigSet,
 	// Configuration
-	ProvideRedisClient,
-	ProvideRedisAdapter,
+	provider.ProvideRedisClient,
+	provider.ProvideRedisAdapter,
 
 	// Repositories
-	ProvideUserRepository,
-	ProvideTokenGenerator,
+	provider.ProvideUserRepository,
+	provider.ProvideTokenGenerator,
 
 	// Use Cases
-	ProvideAuthUseCase,
+	provider.ProvideAuthUseCase,
 
 	// Handlers
-	ProvideHandlers,
+	provider.ProvideHandlers,
+)
+
+// MiddlewareSet groups all middleware-related providers
+var MiddlewareSet = wire.NewSet(
+	provider.ProvideMiddlewareFactory,
 )
 
 // ServerSet groups all server-related providers
 var ServerSet = wire.NewSet(
 	HandlerSet,
-	ProvideHTTPServer,
+	MiddlewareSet,
+	provider.ProvideHTTPServer,
 )
 
 //go:generate wire

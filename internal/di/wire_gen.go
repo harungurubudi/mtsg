@@ -8,6 +8,7 @@ package di
 
 import (
 	"github.com/google/wire"
+	"github.com/harungurubudi/mtsg/internal/di/provider"
 	"github.com/harungurubudi/mtsg/internal/presentation/http"
 	"github.com/harungurubudi/mtsg/internal/usecase"
 )
@@ -16,52 +17,44 @@ import (
 
 //go:generate wire
 func InitializeAuthUseCase() usecase.Authentication {
-	userRepository := ProvideUserRepository()
-	config := ProvideConfig()
-	client := ProvideRedisClient(config)
-	adapterRepository := ProvideRedisAdapter(client)
-	generatorRepository := ProvideTokenGenerator(adapterRepository)
-	authentication := ProvideAuthUseCase(userRepository, generatorRepository)
+	userRepository := provider.ProvideUserRepository()
+	config := provider.ProvideConfig()
+	client := provider.ProvideRedisClient(config)
+	adapterRepository := provider.ProvideRedisAdapter(client)
+	generatorRepository := provider.ProvideTokenGenerator(adapterRepository)
+	authentication := provider.ProvideAuthUseCase(userRepository, generatorRepository)
 	return authentication
 }
 
 //go:generate wire
 func InitializeServer() *http.Server {
-	userRepository := ProvideUserRepository()
-	config := ProvideConfig()
-	client := ProvideRedisClient(config)
-	adapterRepository := ProvideRedisAdapter(client)
-	generatorRepository := ProvideTokenGenerator(adapterRepository)
-	authentication := ProvideAuthUseCase(userRepository, generatorRepository)
-	handlers := ProvideHandlers(authentication)
-	server := ProvideHTTPServer(handlers, config)
+	userRepository := provider.ProvideUserRepository()
+	config := provider.ProvideConfig()
+	client := provider.ProvideRedisClient(config)
+	adapterRepository := provider.ProvideRedisAdapter(client)
+	generatorRepository := provider.ProvideTokenGenerator(adapterRepository)
+	authentication := provider.ProvideAuthUseCase(userRepository, generatorRepository)
+	handlers := provider.ProvideHandlers(authentication)
+	factory := provider.ProvideMiddlewareFactory(authentication)
+	server := provider.ProvideHTTPServer(handlers, config, factory)
 	return server
 }
 
 // wire.go:
 
 // ConfigSet groups all configuration-related providers
-var ConfigSet = wire.NewSet(
-	ProvideConfig,
-)
+var ConfigSet = wire.NewSet(provider.ProvideConfig)
 
 // HandlerSet groups all handler-related providers
 var HandlerSet = wire.NewSet(
-	ConfigSet,
-
-	ProvideRedisClient,
-	ProvideRedisAdapter,
-
-	ProvideUserRepository,
-	ProvideTokenGenerator,
-
-	ProvideAuthUseCase,
-
-	ProvideHandlers,
+	ConfigSet, provider.ProvideRedisClient, provider.ProvideRedisAdapter, provider.ProvideUserRepository, provider.ProvideTokenGenerator, provider.ProvideAuthUseCase, provider.ProvideHandlers,
 )
+
+// MiddlewareSet groups all middleware-related providers
+var MiddlewareSet = wire.NewSet(provider.ProvideMiddlewareFactory)
 
 // ServerSet groups all server-related providers
 var ServerSet = wire.NewSet(
 	HandlerSet,
-	ProvideHTTPServer,
+	MiddlewareSet, provider.ProvideHTTPServer,
 )
