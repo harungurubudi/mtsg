@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
+	"github.com/harungurubudi/mtsg/internal/di"
 	"github.com/harungurubudi/mtsg/internal/domain/tenant"
 	"github.com/harungurubudi/mtsg/internal/domain/user"
 	"github.com/harungurubudi/mtsg/internal/usecase"
@@ -39,11 +40,10 @@ func AuthMiddleware(authUseCase usecase.Authentication) echo.MiddlewareFunc {
 			// Validate token using auth use case
 			// For now, we'll use a default tenant ID since we don't have tenant context
 			// In a real application, you might get tenant ID from subdomain, header, or other context
-			user, err := authUseCase.VerifyToken(c.Request().Context(), token.Token(tokenStr), "access_token", tenant.TenantID{})
+			user, err := di.InitializeAuthUseCase().VerifyToken(c.Request().Context(), token.Token(tokenStr), "access_token", tenant.TenantID{})
 			if err != nil {
 				return http_error.NewUnauthorizedError("invalid or expired token")
 			}
-
 			// Set user context for downstream handlers
 			c.Set(UserContextKey, user)
 			c.Set("user_id", uuid.UUID(user.ID).String())
