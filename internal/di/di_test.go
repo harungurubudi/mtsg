@@ -6,13 +6,13 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestInitializeAuthUseCase(t *testing.T) {
-	// Test that we can initialize the auth use case
-	authUseCase := InitializeAuthUseCase()
+func TestInitializeContainer(t *testing.T) {
+	// Test that we can initialize the container
+	container := InitializeContainer()
 
 	// Verify it's not nil
-	assert.NotNil(t, authUseCase)
+	assert.NotNil(t, container)
 
 	// Simple type check - just verify it's not nil and can be called
-	t.Logf("Auth use case initialized successfully: %T", authUseCase)
+	t.Logf("Container initialized successfully: %T", container)
 }

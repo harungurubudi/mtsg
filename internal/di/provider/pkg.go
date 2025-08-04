@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	redisclient "github.com/go-redis/redis/v8"
+	"github.com/google/wire"
 	"github.com/harungurubudi/mtsg/internal/repository"
 	"github.com/harungurubudi/mtsg/pkg/config"
 	"github.com/harungurubudi/mtsg/pkg/redis"
@@ -18,6 +19,11 @@ func ProvideConfig() *config.Config {
 	}
 	return cfg
 }
+
+// ConfigSet groups all configuration-related providers
+var ConfigSet = wire.NewSet(
+	ProvideConfig,
+)
 
 // ProvideRedisClient provides a Redis client instance
 func ProvideRedisClient(cfg *config.Config) *redisclient.Client {

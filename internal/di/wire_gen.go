@@ -9,27 +9,22 @@ package di
 import (
 	"github.com/google/wire"
 	"github.com/harungurubudi/mtsg/internal/di/provider"
-	"github.com/harungurubudi/mtsg/internal/usecase"
 )
 
 // Injectors from wire.go:
 
 //go:generate wire
-func InitializeAuthUseCase() usecase.Authentication {
+func InitializeContainer() provider.Container {
 	userRepository := provider.ProvideUserRepository()
 	config := provider.ProvideConfig()
 	client := provider.ProvideRedisClient(config)
 	adapterRepository := provider.ProvideRedisAdapter(client)
 	generatorRepository := provider.ProvideTokenGenerator(adapterRepository)
 	authentication := provider.ProvideAuthUseCase(userRepository, generatorRepository)
-	return authentication
+	container := provider.ProvideContainer(authentication)
+	return container
 }
 
 // wire.go:
 
-// ConfigSet groups all configuration-related providers
-var ConfigSet = wire.NewSet(provider.ProvideConfig)
-
-var AuthUseCaseSet = wire.NewSet(
-	ConfigSet, provider.ProvideRedisClient, provider.ProvideRedisAdapter, provider.ProvideUserRepository, provider.ProvideTokenGenerator, provider.ProvideAuthUseCase,
-)
+var UseCaseSet = wire.NewSet(provider.ConfigSet, provider.ProvideRedisClient, provider.ProvideRedisAdapter, provider.ProvideUserRepository, provider.ProvideTokenGenerator, provider.ProvideAuthUseCase, provider.ProvideContainer)

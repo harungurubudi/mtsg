@@ -7,7 +7,6 @@ import (
 )
 
 // Use Case Providers
-
 // ProvideAuthUseCase injects dependencies into Authentication usecase
 func ProvideAuthUseCase(
 	userRepo repository.UserRepository,
