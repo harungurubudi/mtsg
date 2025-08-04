@@ -8,6 +8,7 @@
 
 # Test binary, build output
 tmp/
+build/
 
 # Dependency directories (vendor/)
 bin/
@@ -27,3 +28,4 @@ Thumbs.db
 
 # Environment files
 .envbuild/
+.env
