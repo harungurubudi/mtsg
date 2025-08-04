@@ -8,6 +8,7 @@
 
 # Test binary, build output
 tmp/
+build/
 
 # Dependency directories (vendor/)
 bin/
@@ -26,4 +27,5 @@ go.work
 Thumbs.db
 
 # Environment files
+.envbuild/
 .env

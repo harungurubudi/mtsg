@@ -1,0 +1,142 @@
+# Authentication Handler Rule
+
+## Overview
+Implement authentication HTTP handlers using Echo framework with clean architecture principles, proper error handling, and integration with DTOs and use cases.
+
+## Handler Structure
+
+### AuthHandler Pattern
+```go
+type AuthHandler struct {
+    authUseCase usecase.Authentication
+    validator   *validator.Validate
+}
+```
+
+## Authentication Endpoints
+
+### Required Endpoints
+1. **POST /api/v1/auth/login** - User login with email/password
+2. **POST /api/v1/auth/logout** - User logout (protected route)
+3. **POST /api/v1/auth/refresh** - Refresh access token
+4. **POST /api/v1/auth/register** - User registration
+
+### Handler Pattern
+```go
+func (h *AuthHandler) Login(c echo.Context) error {
+    // 1. Parse and validate request using DTO
+    // 2. Convert DTO to domain model
+    // 3. Call use case
+    // 4. Handle domain errors and map to HTTP errors
+    // 5. Return success response
+}
+```
+
+## Key Principles
+
+### 1. Request Validation
+- Use DTOs with validation tags
+- Validate using `validator.Struct()`
+- Return 400 Bad Request for validation errors
+
+### 2. Error Handling
+- Map domain errors to appropriate HTTP status codes:
+  - `ErrInvalidCredentials` → 401 Unauthorized
+  - `ErrUserNotFound` → 404 Not Found
+  - `ErrUserAlreadyExists` → 409 Conflict
+  - `ErrInvalidToken` → 401 Unauthorized
+  - `ErrTokenExpired` → 401 Unauthorized
+
+### 3. Security
+- Extract tokens from `Authorization: Bearer <token>` header
+- Validate tokens in protected routes
+- Set user context for authenticated requests
+
+### 4. Response Format
+- Use consistent response structure with `dto.NewSuccessResponse()`
+- Return appropriate HTTP status codes
+- Include proper error messages
+
+## DTO Requirements
+
+### LoginRequest
+```go
+type LoginRequest struct {
+    Email    string `json:"email" validate:"required,email"`
+    Password string `json:"password" validate:"required,min=8"`
+}
+```
+
+### Additional DTOs Needed
+- `RefreshTokenRequest` - for token refresh
+- `RegisterRequest` - for user registration
+- `UserResponse` - for user data responses
+
+## Middleware Integration
+
+### Authentication Middleware Pattern
+```go
+func AuthMiddleware(authUseCase usecase.Authentication) echo.MiddlewareFunc {
+    return func(next echo.HandlerFunc) echo.HandlerFunc {
+        return func(c echo.Context) error {
+            // Extract and validate token
+            // Set user_id in context
+            return next(c)
+        }
+    }
+}
+```
+
+## Testing Strategy
+
+### Test Structure
+```go
+func TestAuthHandler_Login(t *testing.T) {
+    // Use table-driven tests
+    // Mock authentication use case
+    // Test success and error scenarios
+    // Verify HTTP status codes and response format
+}
+```
+
+## Integration Points
+
+### Handlers Struct Update
+```go
+type Handlers struct {
+    Ping *PingHandler
+    Auth *AuthHandler  // Add this
+}
+```
+
+### Route Configuration
+- Public routes: login, register, refresh
+- Protected routes: logout (use auth middleware)
+
+## Dependencies
+
+### Required Imports
+- `github.com/go-playground/validator/v10`
+- `github.com/labstack/echo/v4`
+- Domain packages: authentication, user
+- DTO and error packages
+
+## Commands
+
+### Install Dependencies
+```bash
+go get github.com/go-playground/validator/v10
+```
+
+### Generate Mocks
+```bash
+mockgen -source=internal/usecase/authentication.go -destination=testmock/Authentication_mock.go
+```
+
+## Notes
+
+- Follow clean architecture: handlers handle HTTP concerns only
+- Delegate business logic to use cases
+- Use consistent error handling patterns
+- Implement comprehensive test coverage
+- Follow established codebase patterns

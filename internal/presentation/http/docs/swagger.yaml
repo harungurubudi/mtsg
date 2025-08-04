@@ -1,6 +1,56 @@
 basePath: /
 definitions:
-  internal_presentation_http_handler.PingResponse:
+  dto.LoginRequest:
+    description: Login credentials for user authentication
+    properties:
+      email:
+        example: user@example.com
+        type: string
+      password:
+        example: SecurePass123!
+        minLength: 8
+        type: string
+    required:
+    - email
+    - password
+    type: object
+  dto.LoginResponse:
+    description: Authentication tokens returned after successful login
+    properties:
+      access_token:
+        example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        type: string
+      refresh_token:
+        example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        type: string
+    type: object
+  dto.RefreshTokenRequest:
+    description: Request to refresh access token using refresh token
+    properties:
+      refresh_token:
+        example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        type: string
+    required:
+    - refresh_token
+    type: object
+  dto.SuccessResponse:
+    description: Standard success response format
+    properties:
+      data: {}
+      status:
+        example: success
+        type: string
+    type: object
+  error.HTTPError:
+    properties:
+      code:
+        type: string
+      message:
+        type: string
+      status_code:
+        type: integer
+    type: object
+  handler.PingResponse:
     properties:
       message:
         example: pong
@@ -10,6 +60,24 @@ definitions:
         type: string
       timestamp:
         example: "2023-07-29T17:30:00Z"
+        type: string
+    type: object
+  handler.ProtectedPingResponse:
+    properties:
+      message:
+        example: protected pong
+        type: string
+      status:
+        example: ok
+        type: string
+      timestamp:
+        example: "2023-07-29T17:30:00Z"
+        type: string
+      user_email:
+        example: user@example.com
+        type: string
+      user_id:
+        example: 550e8400-e29b-41d4-a716-446655440000
         type: string
     type: object
 host: localhost:8080
@@ -26,6 +94,129 @@ info:
   title: MTSG API
   version: "1.0"
 paths:
+  /api/v1/auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticate user with email and password, returns access and refresh
+        tokens
+      parameters:
+      - description: Login credentials
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Login successful
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.LoginResponse'
+              type: object
+        "400":
+          description: Invalid request format or validation error
+          schema:
+            $ref: '#/definitions/error.HTTPError'
+        "401":
+          description: Invalid credentials
+          schema:
+            $ref: '#/definitions/error.HTTPError'
+        "403":
+          description: Account is inactive
+          schema:
+            $ref: '#/definitions/error.HTTPError'
+        "404":
+          description: User not found
+          schema:
+            $ref: '#/definitions/error.HTTPError'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/error.HTTPError'
+      summary: User login
+      tags:
+      - Authentication
+  /api/v1/auth/logout:
+    post:
+      consumes:
+      - application/json
+      description: Logout user by invalidating the access token
+      parameters:
+      - description: Bearer token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Logout successful
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.SuccessResponse'
+            - properties:
+                data:
+                  type: object
+              type: object
+        "401":
+          description: Missing or invalid authorization header
+          schema:
+            $ref: '#/definitions/error.HTTPError'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/error.HTTPError'
+      security:
+      - BearerAuth: []
+      summary: User logout
+      tags:
+      - Authentication
+  /api/v1/auth/refresh:
+    post:
+      consumes:
+      - application/json
+      description: Generate new access and refresh tokens using a valid refresh token
+      parameters:
+      - description: Refresh token
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.RefreshTokenRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Token refresh successful
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.LoginResponse'
+              type: object
+        "400":
+          description: Invalid request format or validation error
+          schema:
+            $ref: '#/definitions/error.HTTPError'
+        "401":
+          description: Invalid or expired refresh token
+          schema:
+            $ref: '#/definitions/error.HTTPError'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/error.HTTPError'
+      summary: Refresh access token
+      tags:
+      - Authentication
   /ping:
     get:
       consumes:
@@ -37,8 +228,29 @@ paths:
         "200":
           description: Server is running
           schema:
-            $ref: '#/definitions/internal_presentation_http_handler.PingResponse'
+            $ref: '#/definitions/handler.PingResponse'
       summary: Health check endpoint
+      tags:
+      - Health
+  /ping/protected:
+    get:
+      consumes:
+      - application/json
+      description: Protected ping endpoint that requires authentication
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Protected ping successful
+          schema:
+            $ref: '#/definitions/handler.ProtectedPingResponse'
+        "401":
+          description: Unauthorized - missing or invalid token
+          schema:
+            $ref: '#/definitions/error.HTTPError'
+      security:
+      - BearerAuth: []
+      summary: Protected health check endpoint
       tags:
       - Health
 securityDefinitions:

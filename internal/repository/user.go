@@ -28,6 +28,11 @@ func NewUserPersistence() *UserPersistence {
 	uid2 := userdomain.UserID(uuid.New())
 	tid := tenantdomain.TenantID(uuid.New())
 
+	password1 := userdomain.Password("password1")
+	hashedPassword1, _ := userdomain.NewCipherText(password1)
+	password2 := userdomain.Password("password2")
+	hashedPassword2, _ := userdomain.NewCipherText(password2)
+
 	return &UserPersistence{
 		users: []userdomain.User{
 			{
@@ -36,7 +41,7 @@ func NewUserPersistence() *UserPersistence {
 				Email:      "user1@example.com",
 				Name:       "User One",
 				Role:       "admin",
-				CipherText: "hashedpassword1",
+				CipherText: hashedPassword1,
 				Status:     "active",
 			},
 			{
@@ -45,7 +50,7 @@ func NewUserPersistence() *UserPersistence {
 				Email:      "user2@example.com",
 				Name:       "User Two",
 				Role:       "member",
-				CipherText: "hashedpassword2",
+				CipherText: hashedPassword2,
 				Status:     "active",
 			},
 		},

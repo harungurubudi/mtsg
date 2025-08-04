@@ -5,45 +5,27 @@ package di
 
 import (
 	"github.com/google/wire"
-	"github.com/harungurubudi/mtsg/internal/presentation/http"
-	"github.com/harungurubudi/mtsg/internal/usecase"
+	"github.com/harungurubudi/mtsg/internal/di/provider"
 )
 
-// ConfigSet groups all configuration-related providers
-var ConfigSet = wire.NewSet(
-	ProvideConfig,
-)
-
-// HandlerSet groups all handler-related providers
-var HandlerSet = wire.NewSet(
-	ConfigSet,
+var UseCaseSet = wire.NewSet(
+	provider.ConfigSet,
 	// Configuration
-	ProvideRedisClient,
-	ProvideRedisAdapter,
+	provider.ProvideRedisClient,
+	provider.ProvideRedisAdapter,
 
 	// Repositories
-	ProvideUserRepository,
-	ProvideTokenGenerator,
+	provider.ProvideUserRepository,
+	provider.ProvideTokenGenerator,
 
 	// Use Cases
-	ProvideAuthUseCase,
+	provider.ProvideAuthUseCase,
 
-	// Handlers
-	ProvideHandlers,
-)
-
-// ServerSet groups all server-related providers
-var ServerSet = wire.NewSet(
-	HandlerSet,
-	ProvideHTTPServer,
+	// Container
+	provider.ProvideContainer,
 )
 
 //go:generate wire
-func InitializeAuthUseCase() usecase.Authentication {
-	panic(wire.Build(HandlerSet))
-}
-
-//go:generate wire
-func InitializeServer() *http.Server {
-	panic(wire.Build(ServerSet))
+func InitializeContainer() provider.Container {
+	panic(wire.Build(UseCaseSet))
 }

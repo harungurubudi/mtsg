@@ -9,7 +9,6 @@ import (
 	"github.com/harungurubudi/mtsg/internal/presentation/http/handler"
 	"github.com/harungurubudi/mtsg/pkg/config"
 	"github.com/labstack/echo/v4"
-	echoMiddleware "github.com/labstack/echo/v4/middleware"
 	echoSwagger "github.com/swaggo/echo-swagger"
 )
 
@@ -36,23 +35,7 @@ func NewServer(handlers *handler.Handlers, config *config.Config) *Server {
 	return &Server{
 		echo:     e,
 		handlers: handlers,
-		config:   config,
-	}
-}
-
-// setupMiddleware configures global middleware
-func (s *Server) setupMiddleware() {
-	// TODO: Create middleware factory with proper dependencies
-	// For now, use basic Echo middleware
-	s.echo.Use(echoMiddleware.Recover())
-	s.echo.Use(echoMiddleware.Logger())
-	s.echo.Use(echoMiddleware.CORSWithConfig(echoMiddleware.CORSConfig{
-		AllowOrigins: []string{"*"},
-		AllowMethods: []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete},
-		AllowHeaders: []string{echo.HeaderOrigin, echo.HeaderContentType, echo.HeaderAccept, echo.HeaderAuthorization},
-	}))
-	s.echo.Use(echoMiddleware.RequestID())
-	s.echo.Use(echoMiddleware.Gzip())
+		config:   config}
 }
 
 // setupRoutes configures all routes
@@ -63,25 +46,18 @@ func (s *Server) setupRoutes() {
 		return c.Redirect(http.StatusMovedPermanently, "/swagger/index.html")
 	})
 
-	// Ping endpoint
+	// Ping endpoints (root level)
 	s.echo.GET("/ping", s.handlers.Ping.Ping)
+	s.echo.GET("/ping/protected", s.handlers.Ping.ProtectedPing)
 
-	// Health check endpoint
+	// Health check endpoint (root level)
 	s.echo.GET("/health", s.healthCheck)
 
-	// API v1 routes (for future endpoints)
+	// API v1 routes
 	v1 := s.echo.Group("/api/v1")
 
 	// Public routes (no auth required)
-	_ = v1.Group("")
-	// TODO: Add authentication endpoints here
-	// public.POST("/auth/login", s.handlers.Auth.Login)
-
-	// Protected routes (auth required)
-	_ = v1.Group("")
-	// TODO: Add authentication middleware here
-	// protected.Use(AuthMiddleware(s.handlers.Auth.UseCase))
-	// protected.GET("/users/profile", s.handlers.User.GetProfile)
+	s.handlers.SetupRoutes(v1)
 }
 
 // healthCheck handles the health check endpoint
@@ -102,7 +78,6 @@ func (s *Server) setupErrorHandler() {
 
 // Start starts the HTTP server
 func (s *Server) Start() error {
-	s.setupMiddleware()
 	s.setupErrorHandler()
 	s.setupRoutes()
 

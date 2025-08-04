@@ -8,55 +8,23 @@ package di
 
 import (
 	"github.com/google/wire"
-	"github.com/harungurubudi/mtsg/internal/presentation/http"
-	"github.com/harungurubudi/mtsg/internal/usecase"
+	"github.com/harungurubudi/mtsg/internal/di/provider"
 )
 
 // Injectors from wire.go:
 
 //go:generate wire
-func InitializeAuthUseCase() usecase.Authentication {
-	userRepository := ProvideUserRepository()
-	config := ProvideConfig()
-	client := ProvideRedisClient(config)
-	adapterRepository := ProvideRedisAdapter(client)
-	generatorRepository := ProvideTokenGenerator(adapterRepository)
-	authentication := ProvideAuthUseCase(userRepository, generatorRepository)
-	return authentication
-}
-
-//go:generate wire
-func InitializeServer() *http.Server {
-	handlers := ProvideHandlers()
-	config := ProvideConfig()
-	server := ProvideHTTPServer(handlers, config)
-	return server
+func InitializeContainer() provider.Container {
+	userRepository := provider.ProvideUserRepository()
+	config := provider.ProvideConfig()
+	client := provider.ProvideRedisClient(config)
+	adapterRepository := provider.ProvideRedisAdapter(client)
+	generatorRepository := provider.ProvideTokenGenerator(adapterRepository)
+	authentication := provider.ProvideAuthUseCase(userRepository, generatorRepository)
+	container := provider.ProvideContainer(authentication)
+	return container
 }
 
 // wire.go:
 
-// ConfigSet groups all configuration-related providers
-var ConfigSet = wire.NewSet(
-	ProvideConfig,
-)
-
-// HandlerSet groups all handler-related providers
-var HandlerSet = wire.NewSet(
-	ConfigSet,
-
-	ProvideRedisClient,
-	ProvideRedisAdapter,
-
-	ProvideUserRepository,
-	ProvideTokenGenerator,
-
-	ProvideAuthUseCase,
-
-	ProvideHandlers,
-)
-
-// ServerSet groups all server-related providers
-var ServerSet = wire.NewSet(
-	HandlerSet,
-	ProvideHTTPServer,
-)
+var UseCaseSet = wire.NewSet(provider.ConfigSet, provider.ProvideRedisClient, provider.ProvideRedisAdapter, provider.ProvideUserRepository, provider.ProvideTokenGenerator, provider.ProvideAuthUseCase, provider.ProvideContainer)

@@ -1,19 +1,15 @@
-package di
+package provider
 
 import (
 	"fmt"
 
 	redisclient "github.com/go-redis/redis/v8"
-	"github.com/harungurubudi/mtsg/internal/presentation/http"
-	"github.com/harungurubudi/mtsg/internal/presentation/http/handler"
+	"github.com/google/wire"
 	"github.com/harungurubudi/mtsg/internal/repository"
-	"github.com/harungurubudi/mtsg/internal/usecase"
 	"github.com/harungurubudi/mtsg/pkg/config"
 	"github.com/harungurubudi/mtsg/pkg/redis"
 	"github.com/harungurubudi/mtsg/pkg/token"
 )
-
-// Configuration Providers
 
 // ProvideConfig provides application configuration
 func ProvideConfig() *config.Config {
@@ -23,6 +19,11 @@ func ProvideConfig() *config.Config {
 	}
 	return cfg
 }
+
+// ConfigSet groups all configuration-related providers
+var ConfigSet = wire.NewSet(
+	ProvideConfig,
+)
 
 // ProvideRedisClient provides a Redis client instance
 func ProvideRedisClient(cfg *config.Config) *redisclient.Client {
@@ -49,31 +50,4 @@ func ProvideUserRepository() repository.UserRepository {
 // ProvideTokenGenerator provides a concrete implementation of token.GeneratorRepository
 func ProvideTokenGenerator(redisAdapter redis.AdapterRepository) token.GeneratorRepository {
 	return token.NewGenerator(redisAdapter, "your-secret-key-here") // TODO: Use environment variable
-}
-
-// Use Case Providers
-
-// ProvideAuthUseCase injects dependencies into Authentication usecase
-func ProvideAuthUseCase(
-	userRepo repository.UserRepository,
-	tokenGen token.GeneratorRepository,
-) usecase.Authentication {
-	return usecase.NewAuthentication(userRepo, tokenGen)
-}
-
-// Handler Providers
-
-// ProvideHandlers provides HTTP handlers
-func ProvideHandlers() *handler.Handlers {
-	return handler.NewHandlers()
-}
-
-// Server Providers
-
-// ProvideHTTPServer provides HTTP server instance
-func ProvideHTTPServer(
-	handlers *handler.Handlers,
-	config *config.Config,
-) *http.Server {
-	return http.NewServer(handlers, config)
 }

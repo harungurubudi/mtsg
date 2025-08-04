@@ -7,16 +7,18 @@ import (
 )
 
 // ErrorResponse represents the standard error response format
+// @Description Standard error response format
 type ErrorResponse struct {
-	Status string `json:"status"`
-	Error  Error  `json:"error"`
+	Status string `json:"status" example:"error" description:"Response status"`
+	Error  Error  `json:"error" description:"Error details"`
 }
 
 // Error contains error details
+// @Description Error information
 type Error struct {
-	Code       string `json:"code"`
-	Message    string `json:"message"`
-	StatusCode int    `json:"status_code"`
+	Code       string `json:"code" example:"validation_error" description:"Machine-readable error code"`
+	Message    string `json:"message" example:"Invalid request format" description:"Human-readable error message"`
+	StatusCode int    `json:"status_code" example:"400" description:"HTTP status code"`
 }
 
 // NewErrorResponse creates a new error response from HTTPError
@@ -32,9 +34,10 @@ func NewErrorResponse(httpError *pkgerror.HTTPError) *ErrorResponse {
 }
 
 // SuccessResponse represents the standard success response format
+// @Description Standard success response format
 type SuccessResponse struct {
-	Status string      `json:"status"`
-	Data   interface{} `json:"data"`
+	Status string      `json:"status" example:"success" description:"Response status"`
+	Data   interface{} `json:"data" description:"Response data"`
 }
 
 // NewSuccessResponse creates a new success response

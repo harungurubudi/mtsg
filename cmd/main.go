@@ -41,16 +41,32 @@ import (
 	"time"
 
 	"github.com/harungurubudi/mtsg/internal/di"
+	"github.com/harungurubudi/mtsg/internal/presentation/http"
 	_ "github.com/harungurubudi/mtsg/internal/presentation/http/docs" // Import generated docs
+	"github.com/harungurubudi/mtsg/internal/presentation/http/handler"
+	"github.com/harungurubudi/mtsg/pkg/config"
 )
 
 func main() {
-	// Initialize the HTTP server using Wire
-	server := di.InitializeServer()
+	// Initialize the DI container
+	container := di.InitializeContainer()
+
+	// Load configuration
+	cfg, err := config.Load()
+	if err != nil {
+		log.Fatalf("Failed to load configuration: %v", err)
+	}
+
+	// Create handlers (they will get container from context)
+	handlers := handler.NewHandlers()
+
+	// Create HTTP server
+	server := http.NewServer(handlers, cfg)
 
 	// Test the DI setup
 	fmt.Println("✅ Echo server initialized successfully!")
 	fmt.Printf("Server type: %T\n", server)
+	fmt.Printf("Container type: %T\n", container)
 
 	// Start server in a goroutine
 	go func() {
