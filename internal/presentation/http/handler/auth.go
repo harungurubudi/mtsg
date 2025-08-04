@@ -3,29 +3,26 @@ package handler
 import (
 	"errors"
 	"net/http"
-	"strings"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/labstack/echo/v4"
 
 	"github.com/harungurubudi/mtsg/internal/domain/authentication"
 	"github.com/harungurubudi/mtsg/internal/presentation/dto"
-	"github.com/harungurubudi/mtsg/internal/usecase"
+	"github.com/harungurubudi/mtsg/internal/presentation/http/middleware"
 	http_error "github.com/harungurubudi/mtsg/pkg/error"
 	"github.com/harungurubudi/mtsg/pkg/token"
 )
 
 // AuthHandler handles authentication HTTP requests
 type AuthHandler struct {
-	authUseCase usecase.Authentication
-	validator   *validator.Validate
+	validator *validator.Validate
 }
 
 // NewAuthHandler creates a new AuthHandler instance
-func NewAuthHandler(authUseCase usecase.Authentication) *AuthHandler {
+func NewAuthHandler() *AuthHandler {
 	return &AuthHandler{
-		authUseCase: authUseCase,
-		validator:   validator.New(),
+		validator: validator.New(),
 	}
 }
 
@@ -44,6 +41,10 @@ func NewAuthHandler(authUseCase usecase.Authentication) *AuthHandler {
 // @Failure 500 {object} error.HTTPError "Internal server error"
 // @Router /api/v1/auth/login [post]
 func (h *AuthHandler) Login(c echo.Context) error {
+	container, exists := middleware.GetContainerFromContext(c)
+	if !exists {
+		return http_error.NewInternalServerError("DI container not available")
+	}
 	ctx := c.Request().Context()
 
 	// Parse and validate request
@@ -60,7 +61,7 @@ func (h *AuthHandler) Login(c echo.Context) error {
 	credential := req.ToDomain()
 
 	// Call use case
-	session, err := h.authUseCase.Login(ctx, &credential)
+	session, err := container.Authentication.Login(ctx, &credential)
 	if err != nil {
 		// Handle specific domain errors
 		switch {
@@ -93,21 +94,20 @@ func (h *AuthHandler) Login(c echo.Context) error {
 // @Failure 500 {object} error.HTTPError "Internal server error"
 // @Router /api/v1/auth/logout [post]
 func (h *AuthHandler) Logout(c echo.Context) error {
+	container, exists := middleware.GetContainerFromContext(c)
+	if !exists {
+		return http_error.NewInternalServerError("DI container not available")
+	}
 	ctx := c.Request().Context()
 
-	// Extract token from Authorization header
-	authHeader := c.Request().Header.Get("Authorization")
-	if authHeader == "" {
-		return http_error.NewUnauthorizedError("missing authorization header")
-	}
-
-	tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
-	if tokenStr == authHeader {
-		return http_error.NewUnauthorizedError("invalid authorization header format")
+	// Extract token from request using the extracted function
+	tokenStr, err := middleware.ExtractTokenFromRequest(c)
+	if err != nil {
+		return err
 	}
 
 	// Call use case
-	err := h.authUseCase.Logout(ctx, token.Token(tokenStr))
+	err = container.Authentication.Logout(ctx, tokenStr)
 	if err != nil {
 		return http_error.NewInternalServerError("logout failed")
 	}
@@ -130,6 +130,10 @@ func (h *AuthHandler) Logout(c echo.Context) error {
 // @Failure 500 {object} error.HTTPError "Internal server error"
 // @Router /api/v1/auth/refresh [post]
 func (h *AuthHandler) RefreshToken(c echo.Context) error {
+	container, exists := middleware.GetContainerFromContext(c)
+	if !exists {
+		return http_error.NewInternalServerError("DI container not available")
+	}
 	ctx := c.Request().Context()
 
 	// Parse request
@@ -143,7 +147,7 @@ func (h *AuthHandler) RefreshToken(c echo.Context) error {
 	}
 
 	// Call use case
-	session, err := h.authUseCase.RefreshToken(ctx, token.Token(req.RefreshToken))
+	session, err := container.Authentication.RefreshToken(ctx, token.Token(req.RefreshToken))
 	if err != nil {
 		switch {
 		case errors.Is(err, authentication.ErrInvalidAuthentication):
@@ -158,4 +162,11 @@ func (h *AuthHandler) RefreshToken(c echo.Context) error {
 	// Return new tokens
 	response := dto.NewLoginResponse(session)
 	return c.JSON(http.StatusOK, dto.NewSuccessResponse(response))
+}
+
+func (h *AuthHandler) SetupRoutes(prefix string, e *echo.Group) {
+	auth := e.Group(prefix)
+	auth.POST("/login", h.Login)
+	auth.POST("/logout", h.Logout)
+	auth.POST("/refresh", h.RefreshToken)
 }

@@ -1,3 +1,4 @@
+basePath: /
 definitions:
   dto.LoginRequest:
     description: Login credentials for user authentication
@@ -79,8 +80,19 @@ definitions:
         example: 550e8400-e29b-41d4-a716-446655440000
         type: string
     type: object
+host: localhost:8080
 info:
-  contact: {}
+  contact:
+    email: support@swagger.io
+    name: API Support
+    url: http://www.swagger.io/support
+  description: Multi-Tenant SaaS Gateway API
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  termsOfService: http://swagger.io/terms/
+  title: MTSG API
+  version: "1.0"
 paths:
   /api/v1/auth/login:
     post:
@@ -241,4 +253,19 @@ paths:
       summary: Protected health check endpoint
       tags:
       - Health
+securityDefinitions:
+  BearerAuth:
+    description: Type "Bearer" followed by a space and JWT token.
+    in: header
+    name: Authorization
+    type: apiKey
 swagger: "2.0"
+tags:
+- description: Health check operations
+  name: Health
+- description: Authentication operations
+  name: Authentication
+- description: User management operations
+  name: Users
+- description: Tenant management operations
+  name: Tenants

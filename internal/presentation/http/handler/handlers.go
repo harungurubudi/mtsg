@@ -1,7 +1,7 @@
 package handler
 
 import (
-	"github.com/harungurubudi/mtsg/internal/usecase"
+	"github.com/labstack/echo/v4"
 )
 
 // Handlers holds all HTTP handlers
@@ -14,12 +14,17 @@ type Handlers struct {
 }
 
 // NewHandlers creates a new Handlers instance
-func NewHandlers(authUseCase usecase.Authentication) *Handlers {
+func NewHandlers() *Handlers {
 	return &Handlers{
 		Ping: NewPingHandler(),
-		Auth: NewAuthHandler(authUseCase),
+		Auth: NewAuthHandler(),
 		// TODO: Initialize other handlers
 		// User:  NewUserHandler(userUseCase),
 		// Tenant: NewTenantHandler(tenantRepo),
 	}
+}
+
+func (h *Handlers) SetupRoutes(e *echo.Group) {
+	// API routes (under /api/v1)
+	h.Auth.SetupRoutes("auth", e)
 }
