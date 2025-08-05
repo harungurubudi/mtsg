@@ -26,5 +26,5 @@ func NewHandlers() *Handlers {
 
 func (h *Handlers) SetupRoutes(e *echo.Group) {
 	// API routes (under /api/v1)
-	h.Auth.SetupRoutes("auth", e)
+	h.Auth.SetupRoutes("/auth", e)
 }

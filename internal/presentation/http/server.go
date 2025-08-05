@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/harungurubudi/mtsg/internal/presentation/http/errorhandler"
 	"github.com/harungurubudi/mtsg/internal/presentation/http/handler"
+	"github.com/harungurubudi/mtsg/internal/presentation/http/middleware"
 	"github.com/harungurubudi/mtsg/pkg/config"
 	"github.com/labstack/echo/v4"
 	echoSwagger "github.com/swaggo/echo-swagger"
@@ -31,6 +31,9 @@ func NewServer(handlers *handler.Handlers, config *config.Config) *Server {
 	e.Server.ReadTimeout = config.Server.ReadTimeout
 	e.Server.WriteTimeout = config.Server.WriteTimeout
 	e.Server.IdleTimeout = config.Server.IdleTimeout
+
+	// Apply global middleware
+	e.Use(middleware.CreateGlobalMiddleware()...)
 
 	return &Server{
 		echo:     e,
@@ -68,17 +71,8 @@ func (s *Server) healthCheck(c echo.Context) error {
 	})
 }
 
-// setupErrorHandler configures custom error handling
-func (s *Server) setupErrorHandler() {
-	factory := errorhandler.NewErrorHandlerFactory(s.config)
-	errorHandler := factory.CreateErrorHandler()
-
-	s.echo.HTTPErrorHandler = errorHandler.HandleError
-}
-
 // Start starts the HTTP server
 func (s *Server) Start() error {
-	s.setupErrorHandler()
 	s.setupRoutes()
 
 	s.echo.Logger.Infof("Starting server on port %s", s.config.Server.Port)
