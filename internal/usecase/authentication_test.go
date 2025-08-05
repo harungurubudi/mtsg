@@ -298,7 +298,7 @@ func (suite *AuthenticationTestSuite) TestVerifyToken_Success() {
 	authUsecase := NewAuthentication(mockUserRepo, mockTokenGen)
 
 	// Act
-	resultUser, err := authUsecase.VerifyToken(ctx, testToken, subject, tenantID)
+	resultUser, err := authUsecase.VerifyToken(ctx, testToken, subject)
 
 	// Assert
 	assert.NoError(suite.T(), err)
@@ -317,7 +317,6 @@ func (suite *AuthenticationTestSuite) TestVerifyToken_InvalidToken() {
 	// Create test token
 	testToken := token.Token("invalid_token")
 	subject := authentication.AccessTokenSubject
-	tenantID := tenant.TenantID(uuid.New())
 
 	// Mock expectations
 	tokenError := errors.New("token validation failed")
@@ -327,7 +326,7 @@ func (suite *AuthenticationTestSuite) TestVerifyToken_InvalidToken() {
 	authUsecase := NewAuthentication(mockUserRepo, mockTokenGen)
 
 	// Act
-	resultUser, err := authUsecase.VerifyToken(ctx, testToken, subject, tenantID)
+	resultUser, err := authUsecase.VerifyToken(ctx, testToken, subject)
 
 	// Assert
 	assert.Error(suite.T(), err)
@@ -345,7 +344,6 @@ func (suite *AuthenticationTestSuite) TestVerifyToken_UserNotFound() {
 	// Create test token
 	testToken := token.Token("valid_token")
 	subject := authentication.AccessTokenSubject
-	tenantID := tenant.TenantID(uuid.New())
 	userID := user.UserID(uuid.New())
 
 	// Mock expectations
@@ -362,59 +360,12 @@ func (suite *AuthenticationTestSuite) TestVerifyToken_UserNotFound() {
 	authUsecase := NewAuthentication(mockUserRepo, mockTokenGen)
 
 	// Act
-	resultUser, err := authUsecase.VerifyToken(ctx, testToken, subject, tenantID)
+	resultUser, err := authUsecase.VerifyToken(ctx, testToken, subject)
 
 	// Assert
 	assert.Error(suite.T(), err)
 	assert.Nil(suite.T(), resultUser)
 	assert.Equal(suite.T(), authentication.ErrInvalidAuthentication, err)
-}
-
-// TestVerifyToken_TenantMismatch tests token verification with tenant mismatch
-func (suite *AuthenticationTestSuite) TestVerifyToken_TenantMismatch() {
-	// Arrange
-	ctx := context.Background()
-	mockUserRepo := testmock.NewMockUserRepository(suite.T())
-	mockTokenGen := testmock.NewMockGeneratorRepository(suite.T())
-
-	// Create test user with different tenant
-	userID := user.UserID(uuid.New())
-	userTenantID := tenant.TenantID(uuid.New())
-	requiredTenantID := tenant.TenantID(uuid.New()) // Different tenant
-	testUser := &user.User{
-		ID:         userID,
-		TenantID:   userTenantID,
-		Email:      "test@example.com",
-		Name:       "Test User",
-		Role:       "admin",
-		CipherText: "hashedpassword",
-		Status:     user.UserStatusActive,
-	}
-
-	// Create test token
-	testToken := token.Token("valid_token")
-	subject := authentication.AccessTokenSubject
-
-	// Mock expectations
-	expectedClaims := &token.Claims{
-		Subject:    subject,
-		Identifier: uuid.UUID(userID).String(),
-		EXP:        1234567890,
-		JTI:        uuid.New(),
-	}
-	mockTokenGen.EXPECT().Validate(ctx, testToken).Return(expectedClaims, nil)
-	mockUserRepo.EXPECT().GetOneByID(ctx, userID).Return(testUser, nil)
-
-	// Create usecase
-	authUsecase := NewAuthentication(mockUserRepo, mockTokenGen)
-
-	// Act
-	resultUser, err := authUsecase.VerifyToken(ctx, testToken, subject, requiredTenantID)
-
-	// Assert
-	assert.Error(suite.T(), err)
-	assert.Nil(suite.T(), resultUser)
-	assert.Equal(suite.T(), authentication.ErrTenantMismatch, err)
 }
 
 // TestVerifyToken_RepositoryError tests token verification when repository returns an error
@@ -427,7 +378,6 @@ func (suite *AuthenticationTestSuite) TestVerifyToken_RepositoryError() {
 	// Create test token
 	testToken := token.Token("valid_token")
 	subject := authentication.AccessTokenSubject
-	tenantID := tenant.TenantID(uuid.New())
 	userID := user.UserID(uuid.New())
 
 	// Mock expectations
@@ -445,7 +395,7 @@ func (suite *AuthenticationTestSuite) TestVerifyToken_RepositoryError() {
 	authUsecase := NewAuthentication(mockUserRepo, mockTokenGen)
 
 	// Act
-	resultUser, err := authUsecase.VerifyToken(ctx, testToken, subject, tenantID)
+	resultUser, err := authUsecase.VerifyToken(ctx, testToken, subject)
 
 	// Assert
 	assert.Error(suite.T(), err)
@@ -463,7 +413,6 @@ func (suite *AuthenticationTestSuite) TestVerifyToken_InvalidUserID() {
 	// Create test token
 	testToken := token.Token("valid_token")
 	subject := authentication.AccessTokenSubject
-	tenantID := tenant.TenantID(uuid.New())
 
 	// Mock expectations with invalid UUID
 	expectedClaims := &token.Claims{
@@ -478,7 +427,7 @@ func (suite *AuthenticationTestSuite) TestVerifyToken_InvalidUserID() {
 	authUsecase := NewAuthentication(mockUserRepo, mockTokenGen)
 
 	// Act
-	resultUser, err := authUsecase.VerifyToken(ctx, testToken, subject, tenantID)
+	resultUser, err := authUsecase.VerifyToken(ctx, testToken, subject)
 
 	// Assert
 	assert.Error(suite.T(), err)

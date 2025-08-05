@@ -71,22 +71,18 @@ It has arguments :
 - ctx context.Context
 - token token.Token
 - subject string, desired subject
-- tenantID tenant.TenantID
 
 It resulted :
 - *user.User matched user with the payload
 - Error, it can be : 
   - authentication.ErrInvalidAuthentication
   - authentication.ErrForbidden
-  - authentication.ErrTenantMismatch
 
 It has flow : 
 1. Verify if token is valid for the subject using tokenGen.Validate()
 2. If valid, get matched user from UserID in the token claim using userRepo.GetOneByID(). Otherwise, return authentication.ErrInvalidAuthentication
 3. On success, check if returned user has TenantID equal with required tenantID in the args. Then go to step 5
 4. On error, check if the error is user.ErrUserNotFound. If yes, return authentication.ErrInvalidAuthentication. If not, wrap the error with stackerror.NewStackError function 
-5. If tenantID is matched, return the user. Otherwise return authentication.ErrTenantMismatch
-
 ---
 
 ### Refresh Token

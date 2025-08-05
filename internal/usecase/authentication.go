@@ -6,7 +6,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/harungurubudi/mtsg/internal/domain/authentication"
-	"github.com/harungurubudi/mtsg/internal/domain/tenant"
 	"github.com/harungurubudi/mtsg/internal/domain/user"
 	"github.com/harungurubudi/mtsg/internal/repository"
 	stackerror "github.com/harungurubudi/mtsg/pkg/error"
@@ -16,7 +15,7 @@ import (
 // Authentication defines the interface for authentication-related usecases
 type Authentication interface {
 	Login(ctx context.Context, credential *authentication.Credential) (*authentication.Session, error)
-	VerifyToken(ctx context.Context, token token.Token, subject string, tenantID tenant.TenantID) (*user.User, error)
+	VerifyToken(ctx context.Context, token token.Token, subject string) (*user.User, error)
 	RefreshToken(ctx context.Context, refreshToken token.Token) (*authentication.Session, error)
 	Logout(ctx context.Context, accessToken token.Token) error
 }
@@ -93,19 +92,18 @@ func (a *authenticationUsecase) Login(ctx context.Context, credential *authentic
 	return session, nil
 }
 
-// VerifyToken verifies if token is valid for a specific subject and tenantID.
-// This method implements secure token validation with multi-tenant support.
+// VerifyToken verifies if token is valid for a specific subject.
+// This method implements secure token validation for identity verification only.
 //
 // The verification process follows these steps:
 // 1. Token Validation: Verify token validity for the specified subject
 // 2. User Extraction: Extract user from token claims on success
-// 3. Tenant Validation: Check if user belongs to required tenant
-// 4. Error Handling: Proper error wrapping for internal errors
-// 5. Authorization Check: Return forbidden if tenant doesn't match
+// 3. Error Handling: Proper error wrapping for internal errors
+// 4. Return matched user object
 //
 // Security Features:
 // - Subject validation ensures tokens are used for intended purpose
-// - Multi-tenant validation for data isolation
+// - Identity-only validation (authorization handled elsewhere)
 // - Proper error messages that don't leak sensitive information
 // - Stack trace preservation for debugging internal errors
 //
@@ -113,7 +111,7 @@ func (a *authenticationUsecase) Login(ctx context.Context, credential *authentic
 //   - Business errors (authentication.ErrInvalidAuthentication, etc.) are returned directly
 //   - Internal errors are wrapped with stackerror for debugging
 //   - User not found errors are converted to authentication errors
-func (a *authenticationUsecase) VerifyToken(ctx context.Context, token token.Token, subject string, tenantID tenant.TenantID) (*user.User, error) {
+func (a *authenticationUsecase) VerifyToken(ctx context.Context, token token.Token, subject string) (*user.User, error) {
 	// Step 1: Verify if token is valid for the subject using tokenGen.Validate()
 	claims, err := a.tokenGen.Validate(ctx, token)
 	if err != nil {
@@ -128,7 +126,7 @@ func (a *authenticationUsecase) VerifyToken(ctx context.Context, token token.Tok
 
 	matchedUser, err := a.userRepo.GetOneByID(ctx, user.UserID(userID))
 	if err != nil {
-		// Step 4: On error, check if the error is user.ErrUserNotFound
+		// Step 3: On error, check if the error is user.ErrUserNotFound
 		if err == user.ErrUserNotFound {
 			return nil, authentication.ErrInvalidAuthentication
 		}
@@ -136,12 +134,7 @@ func (a *authenticationUsecase) VerifyToken(ctx context.Context, token token.Tok
 		return nil, stackerror.NewStackError("failed to get user by ID", err)
 	}
 
-	// Step 3: On success, check if returned user has TenantID equal with required tenantID in the args
-	// Step 5: If tenantID is matched, return the user. Otherwise return authentication.ErrTenantMismatch
-	if matchedUser.TenantID != tenantID {
-		return nil, authentication.ErrTenantMismatch
-	}
-
+	// Step 4: On success, return matched user object
 	return matchedUser, nil
 }
 
