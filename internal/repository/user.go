@@ -24,9 +24,9 @@ type UserPersistence struct {
 
 // NewUserPersistence creates a new UserPersistence with two hardcoded users.
 func NewUserPersistence() *UserPersistence {
-	uid1 := userdomain.UserID(uuid.New())
-	uid2 := userdomain.UserID(uuid.New())
-	tid := tenantdomain.TenantID(uuid.New())
+	uid1 := userdomain.UserID(uuid.MustParse("123e4567-e89b-12d3-a456-426614174000"))
+	uid2 := userdomain.UserID(uuid.MustParse("123e4567-e89b-12d3-a456-426614174001"))
+	tid := tenantdomain.TenantID(uuid.MustParse("123e4567-e89b-12d3-a456-426614174002"))
 
 	password1 := userdomain.Password("password1")
 	hashedPassword1, _ := userdomain.NewCipherText(password1)

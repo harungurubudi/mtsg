@@ -4,7 +4,6 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
-	"github.com/harungurubudi/mtsg/internal/domain/tenant"
 	"github.com/harungurubudi/mtsg/internal/domain/user"
 	http_error "github.com/harungurubudi/mtsg/pkg/error"
 	"github.com/harungurubudi/mtsg/pkg/token"
@@ -45,9 +44,9 @@ func ValidateTokenAndGetUser(c echo.Context, tokenStr token.Token) (*user.User, 
 	}
 
 	// Validate token using auth use case from container
-	// For now, we'll use a default tenant ID since we don't have tenant context
-	// In a real application, you might get tenant ID from subdomain, header, or other context
-	user, err := container.Authentication.VerifyToken(c.Request().Context(), tokenStr, "access_token", tenant.TenantID{})
+	// Token verification now only handles identity validation
+	// Authorization (tenant checking, etc.) should be handled elsewhere
+	user, err := container.Authentication.VerifyToken(c.Request().Context(), tokenStr, "access_token")
 	if err != nil {
 		return nil, http_error.NewUnauthorizedError("invalid or expired token")
 	}

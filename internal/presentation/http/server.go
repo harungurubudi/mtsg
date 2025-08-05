@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/harungurubudi/mtsg/internal/presentation/http/errorhandler"
 	"github.com/harungurubudi/mtsg/internal/presentation/http/handler"
+	"github.com/harungurubudi/mtsg/internal/presentation/http/middleware"
 	"github.com/harungurubudi/mtsg/pkg/config"
 	"github.com/labstack/echo/v4"
 	echoSwagger "github.com/swaggo/echo-swagger"
@@ -32,6 +32,9 @@ func NewServer(handlers *handler.Handlers, config *config.Config) *Server {
 	e.Server.WriteTimeout = config.Server.WriteTimeout
 	e.Server.IdleTimeout = config.Server.IdleTimeout
 
+	// Apply global middleware
+	e.Use(middleware.CreateGlobalMiddleware()...)
+
 	return &Server{
 		echo:     e,
 		handlers: handlers,
@@ -48,10 +51,13 @@ func (s *Server) setupRoutes() {
 
 	// Ping endpoints (root level)
 	s.echo.GET("/ping", s.handlers.Ping.Ping)
-	s.echo.GET("/ping/protected", s.handlers.Ping.ProtectedPing)
+	s.echo.GET("/ping/protected", s.handlers.Ping.ProtectedPing, middleware.CreateAuthMiddleware())
 
 	// Health check endpoint (root level)
 	s.echo.GET("/health", s.healthCheck)
+
+	// Debug endpoint to test container
+	s.echo.GET("/debug/container", s.debugContainer)
 
 	// API v1 routes
 	v1 := s.echo.Group("/api/v1")
@@ -68,17 +74,23 @@ func (s *Server) healthCheck(c echo.Context) error {
 	})
 }
 
-// setupErrorHandler configures custom error handling
-func (s *Server) setupErrorHandler() {
-	factory := errorhandler.NewErrorHandlerFactory(s.config)
-	errorHandler := factory.CreateErrorHandler()
+// debugContainer handles the debug endpoint to test container injection
+func (s *Server) debugContainer(c echo.Context) error {
+	container, exists := middleware.GetContainerFromContext(c)
+	if !exists {
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"error": "Container not found in context",
+		})
+	}
 
-	s.echo.HTTPErrorHandler = errorHandler.HandleError
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"container_found": true,
+		"authentication":  container.Authentication != nil,
+	})
 }
 
 // Start starts the HTTP server
 func (s *Server) Start() error {
-	s.setupErrorHandler()
 	s.setupRoutes()
 
 	s.echo.Logger.Infof("Starting server on port %s", s.config.Server.Port)

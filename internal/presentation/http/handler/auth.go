@@ -72,7 +72,7 @@ func (h *AuthHandler) Login(c echo.Context) error {
 		case errors.Is(err, authentication.ErrUserInactive):
 			return http_error.NewForbiddenError("account is inactive")
 		default:
-			return http_error.NewInternalServerError("login failed")
+			return err
 		}
 	}
 
@@ -109,7 +109,7 @@ func (h *AuthHandler) Logout(c echo.Context) error {
 	// Call use case
 	err = container.Authentication.Logout(ctx, tokenStr)
 	if err != nil {
-		return http_error.NewInternalServerError("logout failed")
+		return err
 	}
 
 	return c.JSON(http.StatusOK, dto.NewSuccessResponse(map[string]string{
@@ -155,7 +155,7 @@ func (h *AuthHandler) RefreshToken(c echo.Context) error {
 		case errors.Is(err, authentication.ErrUserNotFound):
 			return http_error.NewUnauthorizedError("refresh token expired")
 		default:
-			return http_error.NewInternalServerError("token refresh failed")
+			return err
 		}
 	}
 

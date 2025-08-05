@@ -18,6 +18,7 @@ func CreateGlobalMiddleware() []echo.MiddlewareFunc {
 		}),
 		echoMiddleware.RequestID(),
 		echoMiddleware.Gzip(),
+		HttpErrorHandler(),
 	}
 }
 
