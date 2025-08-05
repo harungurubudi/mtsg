@@ -6,7 +6,6 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
@@ -60,20 +59,14 @@ func (g *generator) Generate(ctx context.Context, claims Claims) (Token, error) 
 		claims.JTI = uuid.New()
 	}
 
-	// Marshal claims to JSON
-	data, err := json.Marshal(claims)
-	if err != nil {
-		return "", fmt.Errorf("failed to marshal claims: %w", err)
-	}
-
 	// Calculate TTL (expiration)
 	ttl := time.Until(time.Unix(claims.EXP, 0))
 	if ttl <= 0 {
 		return "", errors.New("claims.EXP must be in the future")
 	}
 
-	// Store in Redis
-	if err := g.redis.Set(ctx, tokenStr, data, ttl); err != nil {
+	// Store claims directly in Redis (Redis adapter handles JSON marshalling)
+	if err := g.redis.Set(ctx, tokenStr, claims, ttl); err != nil {
 		return "", fmt.Errorf("failed to store token in redis: %w", err)
 	}
 
