@@ -14,9 +14,15 @@ const ContainerContextKey = "di_container"
 func ContainerMiddleware() echo.MiddlewareFunc {
 	container := di.InitializeContainer()
 
+	// Debug: Log container initialization
+	if container.Authentication == nil {
+		panic("Container Authentication is nil - DI initialization failed")
+	}
+
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			c.Set(ContainerContextKey, container)
+			c.Logger().Infof("Container set in context with key: %s", ContainerContextKey)
 			return next(c)
 		}
 	}
@@ -24,8 +30,25 @@ func ContainerMiddleware() echo.MiddlewareFunc {
 
 // GetContainerFromContext extracts container from Echo context
 func GetContainerFromContext(c echo.Context) (*provider.Container, bool) {
-	container, ok := c.Get(ContainerContextKey).(*provider.Container)
-	return container, ok
+	container, ok := c.Get(ContainerContextKey).(provider.Container)
+
+	// Debug: Log what we find in context
+	if !ok {
+		c.Logger().Errorf("Container not found in context with key: %s", ContainerContextKey)
+		// Let's also check what's actually in the context
+		allKeys := make([]string, 0)
+		for _, key := range c.ParamNames() {
+			allKeys = append(allKeys, key)
+		}
+		c.Logger().Errorf("Available keys in context: %v", allKeys)
+
+		// Try to get the raw value to see what's there
+		rawValue := c.Get(ContainerContextKey)
+		c.Logger().Errorf("Raw value for key %s: %v (type: %T)", ContainerContextKey, rawValue, rawValue)
+		return nil, false
+	}
+
+	return &container, true
 }
 
 // RequireContainer middleware ensures that a valid container is present in context

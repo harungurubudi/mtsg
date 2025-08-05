@@ -51,10 +51,13 @@ func (s *Server) setupRoutes() {
 
 	// Ping endpoints (root level)
 	s.echo.GET("/ping", s.handlers.Ping.Ping)
-	s.echo.GET("/ping/protected", s.handlers.Ping.ProtectedPing)
+	s.echo.GET("/ping/protected", s.handlers.Ping.ProtectedPing, middleware.CreateAuthMiddleware())
 
 	// Health check endpoint (root level)
 	s.echo.GET("/health", s.healthCheck)
+
+	// Debug endpoint to test container
+	s.echo.GET("/debug/container", s.debugContainer)
 
 	// API v1 routes
 	v1 := s.echo.Group("/api/v1")
@@ -68,6 +71,21 @@ func (s *Server) healthCheck(c echo.Context) error {
 	return c.JSON(http.StatusOK, map[string]string{
 		"status": "ok",
 		"time":   time.Now().Format(time.RFC3339),
+	})
+}
+
+// debugContainer handles the debug endpoint to test container injection
+func (s *Server) debugContainer(c echo.Context) error {
+	container, exists := middleware.GetContainerFromContext(c)
+	if !exists {
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"error": "Container not found in context",
+		})
+	}
+
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"container_found": true,
+		"authentication":  container.Authentication != nil,
 	})
 }
 
