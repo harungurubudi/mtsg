@@ -5,19 +5,30 @@ services:
     image: redis:7.2-alpine
     container_name: mtsg-redis
     ports:
-      - "6379:6379"
+      - "${MTSG_REDIS_PORT}:6379"
     volumes:
       - redis_data:/data
-    command: redis-server --appendonly yes
+    command: redis-server --appendonly yes --requirepass ${MTSG_REDIS_PASSWORD}
     networks:
       - mtsg-network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD", "redis-cli", "-a", "${MTSG_REDIS_PASSWORD}", "ping"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
 volumes:
   redis_data:
