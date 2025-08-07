@@ -34,6 +34,14 @@ func TestLoad(t *testing.T) {
 					DB:       0,
 					PoolSize: 10,
 				},
+				Database: DatabaseConfig{
+					Host:     "localhost",
+					Port:     5432,
+					Name:     "mtsg",
+					User:     "mtsg_user",
+					Password: "",
+					SSLMode:  "disable",
+				},
 			},
 			wantErr: false,
 		},
@@ -59,6 +67,14 @@ func TestLoad(t *testing.T) {
 					Password: "",
 					DB:       0,
 					PoolSize: 10,
+				},
+				Database: DatabaseConfig{
+					Host:     "localhost",
+					Port:     5432,
+					Name:     "mtsg",
+					User:     "mtsg_user",
+					Password: "",
+					SSLMode:  "disable",
 				},
 			},
 			wantErr: false,
@@ -112,6 +128,14 @@ func TestConfig_Validate(t *testing.T) {
 					Password: "",
 					DB:       0,
 					PoolSize: 10,
+				},
+				Database: DatabaseConfig{
+					Host:     "localhost",
+					Port:     5432,
+					Name:     "mtsg",
+					User:     "mtsg_user",
+					Password: "",
+					SSLMode:  "disable",
 				},
 			},
 			wantErr: false,
@@ -169,4 +193,54 @@ func TestLoadWithInvalidEnvironmentVariable(t *testing.T) {
 
 	_, err := Load()
 	assert.Error(t, err)
+}
+
+func TestDatabaseConfig(t *testing.T) {
+	config := &DatabaseConfig{
+		Host:     "postgres.example.com",
+		Port:     5433,
+		Name:     "mtsg_prod",
+		User:     "mtsg_admin",
+		Password: "secret123",
+		SSLMode:  "require",
+	}
+
+	assert.Equal(t, "postgres.example.com", config.Host)
+	assert.Equal(t, 5433, config.Port)
+	assert.Equal(t, "mtsg_prod", config.Name)
+	assert.Equal(t, "mtsg_admin", config.User)
+	assert.Equal(t, "secret123", config.Password)
+	assert.Equal(t, "require", config.SSLMode)
+}
+
+func TestLoadWithDatabaseEnvironmentVariables(t *testing.T) {
+	// Set database environment variables
+	envVars := map[string]string{
+		"MTSG_DATABASE_HOST":     "postgres.example.com",
+		"MTSG_DATABASE_PORT":     "5433",
+		"MTSG_DATABASE_NAME":     "mtsg_prod",
+		"MTSG_DATABASE_USER":     "mtsg_admin",
+		"MTSG_DATABASE_PASSWORD": "secret123",
+		"MTSG_DATABASE_SSLMODE":  "require",
+	}
+
+	for key, value := range envVars {
+		os.Setenv(key, value)
+	}
+	defer func() {
+		for key := range envVars {
+			os.Unsetenv(key)
+		}
+	}()
+
+	config, err := Load()
+	require.NoError(t, err)
+
+	// Verify database configuration
+	assert.Equal(t, "postgres.example.com", config.Database.Host)
+	assert.Equal(t, 5433, config.Database.Port)
+	assert.Equal(t, "mtsg_prod", config.Database.Name)
+	assert.Equal(t, "mtsg_admin", config.Database.User)
+	assert.Equal(t, "secret123", config.Database.Password)
+	assert.Equal(t, "require", config.Database.SSLMode)
 }

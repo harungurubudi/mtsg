@@ -10,8 +10,9 @@ import (
 
 // Config represents the global application configuration
 type Config struct {
-	Server ServerConfig `mapstructure:"server"`
-	Redis  RedisConfig  `mapstructure:"redis"`
+	Server   ServerConfig   `mapstructure:"server"`
+	Redis    RedisConfig    `mapstructure:"redis"`
+	Database DatabaseConfig `mapstructure:"database"`
 }
 
 // ServerConfig contains HTTP server configuration
@@ -30,6 +31,16 @@ type RedisConfig struct {
 	Password string `mapstructure:"password"`
 	DB       int    `mapstructure:"db"`
 	PoolSize int    `mapstructure:"pool_size"`
+}
+
+// DatabaseConfig contains PostgreSQL database configuration
+type DatabaseConfig struct {
+	Host     string `mapstructure:"host"`
+	Port     int    `mapstructure:"port"`
+	Name     string `mapstructure:"name"`
+	User     string `mapstructure:"user"`
+	Password string `mapstructure:"password"`
+	SSLMode  string `mapstructure:"sslmode"`
 }
 
 // setupViper configures Viper for configuration management
@@ -68,6 +79,14 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("redis.password", "")
 	v.SetDefault("redis.db", 0)
 	v.SetDefault("redis.pool_size", 10)
+
+	// Database defaults
+	v.SetDefault("database.host", "localhost")
+	v.SetDefault("database.port", 5432)
+	v.SetDefault("database.name", "mtsg")
+	v.SetDefault("database.user", "mtsg_user")
+	v.SetDefault("database.password", "")
+	v.SetDefault("database.sslmode", "disable")
 }
 
 // Load loads configuration from multiple sources
