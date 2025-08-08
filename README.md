@@ -11,8 +11,11 @@ Designed and coded with help from [Cursor](https://cursor.sh) – an AI-assisted
 - Multi-tenant structure with tenant scoping at every layer
 - Clean Architecture with dependency injection using Google Wire
 - JWT-based authentication with Redis token storage
+- PostgreSQL database with sqlx integration
+- Database migration system with sql-migrate
 - Swagger API documentation
 - Comprehensive testing setup
+- Docker Compose for local development
 - More features is coming soon
 
 ---
@@ -44,13 +47,21 @@ Designed and coded with help from [Cursor](https://cursor.sh) – an AI-assisted
 ### Prerequisites
 
 - Go 1.24.3 or later
-- Redis server running locally (or configure remote Redis)
+- Docker and Docker Compose (for local development)
+- PostgreSQL database (or use Docker Compose)
+- Redis server (or use Docker Compose)
 
 ### One-Command Setup
 
 ```bash
+# Start database services (PostgreSQL + Redis)
+docker-compose up -d
+
 # Complete development setup (installs tools, dependencies, generates code)
 make dev-setup
+
+# Run database migrations
+./mtsg migration up
 
 # Start the application
 make dev
@@ -69,6 +80,11 @@ make dev
    # Edit .env with your configuration
    ```
 
+3. **Start database services:**
+   ```bash
+   docker-compose up -d
+   ```
+
 3. **Download dependencies:**
    ```bash
    make deps
@@ -79,7 +95,12 @@ make dev
    make generate
    ```
 
-5. **Run the application:**
+5. **Run database migrations:**
+   ```bash
+   ./mtsg migration up
+   ```
+
+6. **Run the application:**
    ```bash
    make dev
    ```
@@ -94,6 +115,14 @@ The project includes a comprehensive Makefile for easy development workflow:
 make dev              # Run in development mode
 make dev-background   # Run in background
 make quick-start      # Check deps, generate code, and run dev server
+```
+
+### 🗄️ Database Commands
+
+```bash
+./mtsg migration up    # Run database migrations up
+./mtsg migration down  # Rollback database migrations
+./mtsg server          # Start the HTTP server
 ```
 
 ### 🔨 Build Commands
@@ -147,6 +176,8 @@ make lint             # Run linter
 ### 🐳 Docker
 
 ```bash
+docker-compose up -d  # Start database services (PostgreSQL + Redis)
+docker-compose down   # Stop database services
 make docker-build     # Build Docker image
 make docker-run       # Run Docker container
 ```
@@ -167,13 +198,16 @@ make help             # Show all available commands
 
 2. Modify the `.env` file with your configuration:
    ```bash
-   # Server configuration
-   MTSG_SERVER_PORT=8080
-   MTSG_SERVER_ENVIRONMENT=development
+   # Database configuration
+   MTSG_POSTGRES_HOST=localhost
+   MTSG_POSTGRES_PORT=5432
+   MTSG_POSTGRES_USER=mtsg_user
+   MTSG_POSTGRES_PASSWORD=Password123!
+   MTSG_POSTGRES_DB=mtsg
    
    # Redis configuration
-   MTSG_REDIS_HOST=localhost
    MTSG_REDIS_PORT=6379
+   MTSG_REDIS_PASSWORD=guest
    ```
 
 ## Available Endpoints
@@ -187,24 +221,34 @@ make help             # Show all available commands
 
 ## Development Workflow
 
-1. **Start development:**
+1. **Start database services:**
+   ```bash
+   docker-compose up -d
+   ```
+
+2. **Run migrations:**
+   ```bash
+   ./mtsg migration up
+   ```
+
+3. **Start development:**
    ```bash
    make dev
    ```
 
-2. **Make changes to code**
+4. **Make changes to code**
 
-3. **Regenerate code if needed:**
+5. **Regenerate code if needed:**
    ```bash
    make generate
    ```
 
-4. **Run tests:**
+6. **Run tests:**
    ```bash
    make test
    ```
 
-5. **Format code:**
+7. **Format code:**
    ```bash
    make fmt
    ```
@@ -214,6 +258,27 @@ make help             # Show all available commands
 ### Port 8080 Already in Use
 ```bash
 make kill-port-8080
+```
+
+### Database Connection Issues
+```bash
+# Check if database services are running
+docker-compose ps
+
+# Restart database services
+docker-compose restart
+
+# Check database logs
+docker-compose logs postgres
+```
+
+### Migration Issues
+```bash
+# Check migration status
+./mtsg migration up
+
+# Rollback if needed
+./mtsg migration down
 ```
 
 ### Missing Tools

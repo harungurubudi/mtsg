@@ -1,0 +1,111 @@
+# User Table Migration
+
+This is user table migration definition. This table should accommodate operational of User struct in internal/domain/user package.
+
+## Table Design
+
+### Users Table Schema
+
+| Column Name    | Data Type                    | Constraints                    | Description                                    |
+|----------------|------------------------------|--------------------------------|------------------------------------------------|
+| `id`           | `UUID`                       | `PRIMARY KEY`                  | Unique identifier for the user                 |
+| `tenant_id`    | `UUID`                       | `NOT NULL, FOREIGN KEY`        | Reference to tenants table                     |
+| `email`        | `VARCHAR(255)`               | `NOT NULL, UNIQUE`             | User's email address                           |
+| `name`         | `VARCHAR(255)`               | `NOT NULL`                     | User's full name                               |
+| `role`         | `VARCHAR(20)`                | `NOT NULL, CHECK`              | User role: 'admin' or 'member'                 |
+| `ciphertext`   | `VARCHAR(255)`               | `NOT NULL`                     | Bcrypt hashed password                         |
+| `status`       | `VARCHAR(20)`                | `NOT NULL, CHECK`              | User status: 'active' or 'inactive'            |
+| `created_at`   | `TIMESTAMP WITH TIME ZONE`   | `NOT NULL, DEFAULT NOW()`      | Timestamp of user creation                     |
+| `updated_at`   | `TIMESTAMP WITH TIME ZONE`   | `NOT NULL, DEFAULT NOW()`      | Timestamp of last update                       |
+| `deleted_at`   | `TIMESTAMP WITH TIME ZONE`   | `NULL`                         | Soft delete timestamp                          |
+| `is_deleted`   | `BOOLEAN`                    | `NOT NULL, DEFAULT FALSE`      | Soft delete flag                               |
+
+### Constraints
+
+#### Check Constraints
+```sql
+-- Role constraint
+CONSTRAINT chk_user_role CHECK (role IN ('admin', 'member'))
+
+-- Status constraint  
+CONSTRAINT chk_user_status CHECK (status IN ('active', 'inactive'))
+```
+
+#### Foreign Key Constraints
+```sql
+-- Tenant reference
+CONSTRAINT fk_users_tenant_id FOREIGN KEY (tenant_id) REFERENCES tenants(id)
+```
+
+#### Indexes
+```sql
+-- Primary key (automatic)
+PRIMARY KEY (id)
+
+-- Email uniqueness and lookup
+CREATE UNIQUE INDEX idx_users_email ON users(email) WHERE NOT is_deleted;
+
+-- Tenant lookup
+CREATE INDEX idx_users_tenant_id ON users(tenant_id);
+
+-- Status filtering
+CREATE INDEX idx_users_status ON users(status) WHERE status = 'active';
+
+-- Soft delete filtering
+CREATE INDEX idx_users_is_deleted ON users(is_deleted) WHERE is_deleted = false;
+
+-- Composite index for tenant + status queries
+CREATE INDEX idx_users_tenant_status ON users(tenant_id, status);
+```
+
+### Default Values
+
+| Column Name    | Default Value                | Description                                    |
+|----------------|------------------------------|------------------------------------------------|
+| `role`         | `'member'`                   | Default user role                              |
+| `status`       | `'active'`                   | Default user status                            |
+| `created_at`   | `CURRENT_TIMESTAMP`          | Auto-set creation timestamp                    |
+| `updated_at`   | `CURRENT_TIMESTAMP`          | Auto-set update timestamp                      |
+| `is_deleted`   | `FALSE`                      | Default soft delete flag                       |
+
+### Triggers
+
+#### Update Timestamp Trigger
+```sql
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+CREATE TRIGGER update_users_updated_at 
+    BEFORE UPDATE ON users 
+    FOR EACH ROW 
+    EXECUTE FUNCTION update_updated_at_column();
+```
+
+### Business Rules
+
+1. **Email Uniqueness**: Email must be unique across all non-deleted users
+2. **Tenant Association**: Every user must belong to a valid tenant
+3. **Role Validation**: Role must be either 'admin' or 'member'
+4. **Status Validation**: Status must be either 'active' or 'inactive'
+5. **Soft Delete**: Users are soft deleted, not physically removed
+6. **Password Security**: Passwords are stored as bcrypt hashes (min 10 rounds)
+
+### Data Types Mapping
+
+| Go Type        | PostgreSQL Type              | Notes                                          |
+|----------------|------------------------------|------------------------------------------------|
+| `UserID`       | `UUID`                       | Custom type based on uuid.UUID                 |
+| `TenantID`     | `UUID`                       | Custom type based on uuid.UUID                 |
+| `Email`        | `VARCHAR(255)`               | String type with email validation              |
+| `UserRole`     | `VARCHAR(20)`                | Enum-like string with constraints              |
+| `CipherText`   | `VARCHAR(255)`               | Bcrypt hash storage                            |
+| `UserStatus`   | `VARCHAR(20)`                | Enum-like string with constraints              |
+| `time.Time`    | `TIMESTAMP WITH TIME ZONE`   | UTC timestamps                                 |
+| `*time.Time`   | `TIMESTAMP WITH TIME ZONE`   | Nullable timestamp for soft delete             |
+| `bool`         | `BOOLEAN`                    | Boolean flag                                   |
+

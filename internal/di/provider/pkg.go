@@ -9,6 +9,7 @@ import (
 	"github.com/harungurubudi/mtsg/pkg/config"
 	"github.com/harungurubudi/mtsg/pkg/redis"
 	"github.com/harungurubudi/mtsg/pkg/token"
+	"github.com/jmoiron/sqlx"
 )
 
 // ProvideConfig provides application configuration
@@ -50,4 +51,23 @@ func ProvideUserRepository() repository.UserRepository {
 // ProvideTokenGenerator provides a concrete implementation of token.GeneratorRepository
 func ProvideTokenGenerator(redisAdapter redis.AdapterRepository) token.GeneratorRepository {
 	return token.NewGenerator(redisAdapter, "your-secret-key-here") // TODO: Use environment variable
+}
+
+// ProvideSqlx provides a sqlx.DB instance using configuration values
+func ProvideSqlx(cfg *config.Config) *sqlx.DB {
+	var generateConnectionString = func() string {
+		return fmt.Sprintf(
+			"postgres://%s:%s@%s:%d/%s?sslmode=disable",
+			cfg.Database.User,
+			cfg.Database.Password,
+			cfg.Database.Host,
+			cfg.Database.Port,
+			cfg.Database.Name,
+		)
+	}
+	db, err := sqlx.Connect("postgres", generateConnectionString())
+	if err != nil {
+		panic(fmt.Sprintf("failed to connect to database: %v", err))
+	}
+	return db
 }

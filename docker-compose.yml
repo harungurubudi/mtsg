@@ -1,27 +1,66 @@
 version: '3.8'
 
 services:
-  redis:
-    image: redis:7.2-alpine
-    container_name: mtsg-redis
+  postgres:
+    image: postgres:15-alpine
+    container_name: mtsg-postgres
     ports:
-      - "6379:6379"
+      - "${MTSG_DATABASE_PORT}:5432"
     volumes:
-      - redis_data:/data
-    command: redis-server --appendonly yes
+      - .docker/postgres/data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: ${MTSG_DATABASE_NAME}
+      POSTGRES_USER: ${MTSG_DATABASE_USER}
+      POSTGRES_PASSWORD: ${MTSG_DATABASE_PASSWORD}
     networks:
       - mtsg-network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD-SHELL", "pg_isready -U ${MTSG_DATABASE_USER} -d ${MTSG_DATABASE_NAME}"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 512M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
-volumes:
-  redis_data:
-    driver: local
+  redis:
+    image: redis:7.2-alpine
+    container_name: mtsg-redis
+    ports:
+      - "${MTSG_REDIS_PORT}:6379"
+    volumes:
+      - .docker/redis/data:/data
+    command: redis-server --appendonly yes --requirepass ${MTSG_REDIS_PASSWORD}
+    networks:
+      - mtsg-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${MTSG_REDIS_PASSWORD}", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
 networks:
   mtsg-network:

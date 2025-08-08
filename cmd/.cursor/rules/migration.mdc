@@ -1,0 +1,53 @@
+# Migration Command
+
+Through database migration process utilizes `https://github.com/rubenv/sql-migrate`, we don't use its generic command to run it. This is to keep the configuration centralized under .env.
+
+## Commands
+
+We can run the migration by cobra command:
+
+```shell
+app migration up
+```
+To migrate up
+
+and
+
+```shell
+app migration down
+```
+To migrate down
+
+## Implementation
+
+The `migrate` command accesses migration files in the `migration/` directory through the `&FileMigrationSource` object from the `github.com/rubenv/sql-migrate` library. Then it runs the `Exec` function with the `ProvideSqlx` provider from the `internal/di/provider` package.
+
+## Migration File Structure
+
+```
+migration/
+├── 001_create_users.up.sql
+├── 001_create_users.down.sql
+├── 002_create_projects.up.sql
+└── 002_create_projects.down.sql
+```
+
+## Migration Naming Convention
+
+- Format: `{sequence}_{description}.{direction}.sql`
+- Example: `001_create_users.up.sql`
+- Sequence: 3-digit zero-padded numbers (001, 002, 003...)
+- Description: snake_case descriptive name
+- Direction: `up` for forward migration, `down` for rollback
+
+## Migration Table
+
+- Default table name: `gorp_migrations`
+- Tracks applied migrations and their timestamps
+- Automatically created by sql-migrate library
+
+## Environment Support
+
+- Uses centralized configuration from .env
+- Database connection via `ProvideSqlx` provider
+- Supports different environments (dev/staging/prod) through config

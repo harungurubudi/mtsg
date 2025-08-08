@@ -29,3 +29,10 @@ Thumbs.db
 # Environment files
 .envbuild/
 .env
+
+# Docker data directories
+.docker/postgres/
+.docker/redis/
+
+# Generated files
+internal/di/wire_gen.go

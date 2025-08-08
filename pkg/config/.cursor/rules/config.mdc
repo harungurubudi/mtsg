@@ -22,8 +22,9 @@ pkg/
 ```go
 // Config represents the global application configuration
 type Config struct {
-    Server ServerConfig `mapstructure:"server"`
-    Redis  RedisConfig  `mapstructure:"redis"`
+    Server   ServerConfig   `mapstructure:"server"`
+    Redis    RedisConfig    `mapstructure:"redis"`
+    Database DatabaseConfig `mapstructure:"database"`
 }
 ```
 
@@ -112,6 +113,14 @@ func setDefaults(v *viper.Viper) {
     v.SetDefault("redis.host", "localhost")
     v.SetDefault("redis.port", 6379)
     v.SetDefault("redis.db", 0)
+    
+    // Database defaults
+    v.SetDefault("database.host", "localhost")
+    v.SetDefault("database.port", 5432)
+    v.SetDefault("database.name", "mtsg")
+    v.SetDefault("database.user", "mtsg_user")
+    v.SetDefault("database.password", "")
+    v.SetDefault("database.sslmode", "disable")
 }
 ```
 
@@ -139,6 +148,18 @@ type RedisConfig struct {
 }
 ```
 
+### DatabaseConfig
+```go
+type DatabaseConfig struct {
+    Host     string `mapstructure:"host"`
+    Port     int    `mapstructure:"port"`
+    Name     string `mapstructure:"name"`
+    User     string `mapstructure:"user"`
+    Password string `mapstructure:"password"`
+    SSLMode  string `mapstructure:"sslmode"`
+}
+```
+
 
 
 ## Environment Variables
@@ -153,6 +174,12 @@ type RedisConfig struct {
 - `MTSG_REDIS_PORT` - Redis port (default: 6379)
 - `MTSG_REDIS_PASSWORD` - Redis password (default: empty)
 - `MTSG_REDIS_DB` - Redis database (default: 0)
+- `MTSG_DATABASE_HOST` - Database host (default: localhost)
+- `MTSG_DATABASE_PORT` - Database port (default: 5432)
+- `MTSG_DATABASE_NAME` - Database name (default: mtsg)
+- `MTSG_DATABASE_USER` - Database user (default: mtsg_user)
+- `MTSG_DATABASE_PASSWORD` - Database password (default: empty)
+- `MTSG_DATABASE_SSLMODE` - SSL mode (default: disable)
 
 ## Configuration Files
 
@@ -171,6 +198,14 @@ redis:
   password: ""
   db: 0
   pool_size: 10
+
+database:
+  host: "localhost"
+  port: 5432
+  name: "mtsg"
+  user: "mtsg_user"
+  password: ""
+  sslmode: "disable"
 ```
 
 ## Dependency Injection Integration
