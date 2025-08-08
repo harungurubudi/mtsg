@@ -84,8 +84,8 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("database.host", "localhost")
 	v.SetDefault("database.port", 5432)
 	v.SetDefault("database.name", "mtsg")
-	v.SetDefault("database.user", "mtsg_user")
-	v.SetDefault("database.password", "")
+	v.SetDefault("database.user", "user")
+	v.SetDefault("database.password", "Password123!")
 	v.SetDefault("database.sslmode", "disable")
 }
 

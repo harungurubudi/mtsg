@@ -57,14 +57,12 @@ func ProvideTokenGenerator(redisAdapter redis.AdapterRepository) token.Generator
 func ProvideSqlx(cfg *config.Config) *sqlx.DB {
 	var generateConnectionString = func() string {
 		return fmt.Sprintf(
-			"host=%s port=%d dbname=%s user=%s password=%s sslmode=%s application_name=%s",
+			"postgres://%s:%s@%s:%d/%s?sslmode=disable",
+			cfg.Database.User,
+			cfg.Database.Password,
 			cfg.Database.Host,
 			cfg.Database.Port,
 			cfg.Database.Name,
-			cfg.Database.User,
-			cfg.Database.Password,
-			cfg.Database.SSLMode,
-			cfg.Server.Environment,
 		)
 	}
 	db, err := sqlx.Connect("postgres", generateConnectionString())

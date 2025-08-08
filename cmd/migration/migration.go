@@ -6,7 +6,8 @@ import (
 
 	"github.com/harungurubudi/mtsg/internal/di/provider"
 	"github.com/jmoiron/sqlx"
-	"github.com/rubenv/sql-migrate"
+	_ "github.com/lib/pq" // PostgreSQL driver
+	migrate "github.com/rubenv/sql-migrate"
 	"github.com/spf13/cobra"
 )
 
@@ -91,4 +92,4 @@ func getDatabaseConnection() *sqlx.DB {
 	db := provider.ProvideSqlx(cfg)
 
 	return db
-} 
+}
