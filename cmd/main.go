@@ -40,14 +40,42 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/harungurubudi/mtsg/cmd/migration"
 	"github.com/harungurubudi/mtsg/internal/di"
 	"github.com/harungurubudi/mtsg/internal/presentation/http"
 	_ "github.com/harungurubudi/mtsg/internal/presentation/http/docs" // Import generated docs
 	"github.com/harungurubudi/mtsg/internal/presentation/http/handler"
 	"github.com/harungurubudi/mtsg/pkg/config"
+	"github.com/spf13/cobra"
 )
 
 func main() {
+	// Create root command
+	rootCmd := &cobra.Command{
+		Use:   "mtsg",
+		Short: "Multi-Tenant SaaS Gateway",
+		Long:  "A comprehensive multi-tenant SaaS gateway API",
+	}
+
+	// Add migration commands
+	rootCmd.AddCommand(migration.RootCmd)
+
+	// Add server command
+	serverCmd := &cobra.Command{
+		Use:   "server",
+		Short: "Start the HTTP server",
+		Long:  "Start the MTSG HTTP server",
+		Run:   runServer,
+	}
+	rootCmd.AddCommand(serverCmd)
+
+	// Execute the root command
+	if err := rootCmd.Execute(); err != nil {
+		log.Fatalf("Failed to execute command: %v", err)
+	}
+}
+
+func runServer(cmd *cobra.Command, args []string) {
 	// Initialize the DI container
 	container := di.InitializeContainer()
 
